@@ -1,0 +1,11 @@
+Todo List
+
+Features
+- Add new todos
+- Mark as complete (and undo)
+- Delete a todo
+
+
+Tech
+- Vite with vanilla JS
+- No backend for now
