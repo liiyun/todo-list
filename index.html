@@ -4,10 +4,33 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>todo-app</title>
+    <title>Todo List</title>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <main class="todo-app">
+        <header class="todo-header">
+          <h1 class="todo-title">Todo List</h1>
+        </header>
+
+        <form class="todo-form" autocomplete="off">
+          <label class="todo-label" for="todo-input">New task</label>
+          <div class="todo-form-row">
+            <input
+              class="todo-input"
+              id="todo-input"
+              name="todo"
+              type="text"
+              placeholder="What needs doing?"
+              maxlength="500"
+            />
+            <button class="todo-add-button" type="submit">Add</button>
+          </div>
+        </form>
+
+        <ul class="todo-list" aria-label="Tasks"></ul>
+      </main>
+    </div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
