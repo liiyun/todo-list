@@ -1,12 +1,10 @@
 import './style.css'
 
-const STORAGE_KEY = 'todo-app.todos'
-
 const todoForm = document.querySelector('.todo-form')
 const todoInput = document.querySelector('.todo-input')
 const todoList = document.querySelector('.todo-list')
 
-let todos = loadTodos()
+let todos = []
 
 todoForm.addEventListener('submit', (event) => {
   event.preventDefault()
@@ -25,7 +23,6 @@ todoForm.addEventListener('submit', (event) => {
 
   todoInput.value = ''
   todoInput.focus()
-  saveTodos()
   renderTodos()
 })
 
@@ -37,7 +34,6 @@ todoList.addEventListener('change', (event) => {
     todo.id === checkbox.dataset.id ? { ...todo, completed: checkbox.checked } : todo,
   )
 
-  saveTodos()
   renderTodos()
 })
 
@@ -47,7 +43,6 @@ todoList.addEventListener('click', (event) => {
 
   todos = todos.filter((todo) => todo.id !== deleteButton.dataset.id)
 
-  saveTodos()
   renderTodos()
 })
 
@@ -86,22 +81,6 @@ function createTodoItem(todo) {
 
   item.append(checkbox, text, deleteButton)
   return item
-}
-
-function loadTodos() {
-  const savedTodos = localStorage.getItem(STORAGE_KEY)
-  if (!savedTodos) return []
-
-  try {
-    const parsedTodos = JSON.parse(savedTodos)
-    return Array.isArray(parsedTodos) ? parsedTodos : []
-  } catch {
-    return []
-  }
-}
-
-function saveTodos() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(todos))
 }
 
 function createTodoId() {
