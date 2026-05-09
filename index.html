@@ -11,6 +11,108 @@
       <main class="todo-app">
         <header class="todo-header">
           <h1 class="todo-title">Todo List</h1>
+
+          <div class="todo-auth" aria-label="Account">
+            <div class="todo-auth-signed-in todo-auth-signed-in--hidden">
+              <span class="todo-auth-email" aria-live="polite"></span>
+              <button type="button" class="todo-auth-sign-out">Sign out</button>
+            </div>
+
+            <div class="todo-auth-guest">
+              <p class="todo-auth-guest-intro">Use a guest session, or create an account to keep tasks on this device.</p>
+              <div class="todo-auth-tabs" role="tablist" aria-label="Account options">
+                <button
+                  type="button"
+                  class="todo-auth-tab todo-auth-tab--active"
+                  role="tab"
+                  aria-selected="true"
+                  data-panel="signup"
+                  id="todo-auth-tab-signup"
+                >
+                  Create account
+                </button>
+                <button
+                  type="button"
+                  class="todo-auth-tab"
+                  role="tab"
+                  aria-selected="false"
+                  data-panel="signin"
+                  id="todo-auth-tab-signin"
+                >
+                  Sign in
+                </button>
+              </div>
+
+              <form
+                class="todo-auth-form todo-auth-signup-form"
+                id="todo-auth-signup-form"
+                role="tabpanel"
+                aria-labelledby="todo-auth-tab-signup"
+                autocomplete="off"
+              >
+                <div class="todo-auth-fields">
+                  <div class="todo-field">
+                    <label class="todo-label" for="todo-auth-signup-email">Email</label>
+                    <input
+                      class="todo-input todo-auth-input"
+                      id="todo-auth-signup-email"
+                      name="email"
+                      type="email"
+                      required
+                      autocomplete="email"
+                    />
+                  </div>
+                  <div class="todo-field">
+                    <label class="todo-label" for="todo-auth-signup-password">Password</label>
+                    <input
+                      class="todo-input todo-auth-input"
+                      id="todo-auth-signup-password"
+                      name="password"
+                      type="password"
+                      required
+                      minlength="6"
+                      autocomplete="new-password"
+                    />
+                  </div>
+                </div>
+                <button type="submit" class="todo-auth-submit">Create account</button>
+              </form>
+
+              <form
+                class="todo-auth-form todo-auth-signin-form todo-auth-form--hidden"
+                id="todo-auth-signin-form"
+                role="tabpanel"
+                aria-labelledby="todo-auth-tab-signin"
+                autocomplete="off"
+              >
+                <div class="todo-auth-fields">
+                  <div class="todo-field">
+                    <label class="todo-label" for="todo-auth-signin-email">Email</label>
+                    <input
+                      class="todo-input todo-auth-input"
+                      id="todo-auth-signin-email"
+                      name="email"
+                      type="email"
+                      required
+                      autocomplete="email"
+                    />
+                  </div>
+                  <div class="todo-field">
+                    <label class="todo-label" for="todo-auth-signin-password">Password</label>
+                    <input
+                      class="todo-input todo-auth-input"
+                      id="todo-auth-signin-password"
+                      name="password"
+                      type="password"
+                      required
+                      autocomplete="current-password"
+                    />
+                  </div>
+                </div>
+                <button type="submit" class="todo-auth-submit">Sign in</button>
+              </form>
+            </div>
+          </div>
         </header>
 
         <p class="todo-status todo-status--hidden" role="status" aria-live="polite"></p>

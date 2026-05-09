@@ -10,6 +10,17 @@ const retryButton = document.querySelector('.todo-retry-button')
 const categorySelect = document.querySelector('.todo-category-select')
 const dueDateInput = document.querySelector('.todo-due-date')
 const prioritySelect = document.querySelector('.todo-priority-select')
+const authSignedIn = document.querySelector('.todo-auth-signed-in')
+const authGuest = document.querySelector('.todo-auth-guest')
+const authEmailEl = document.querySelector('.todo-auth-email')
+const authSignOutBtn = document.querySelector('.todo-auth-sign-out')
+const authTabs = document.querySelectorAll('.todo-auth-tab')
+const authSignupForm = document.querySelector('.todo-auth-signup-form')
+const authSigninForm = document.querySelector('.todo-auth-signin-form')
+const authSignupEmail = document.querySelector('#todo-auth-signup-email')
+const authSignupPassword = document.querySelector('#todo-auth-signup-password')
+const authSigninEmail = document.querySelector('#todo-auth-signin-email')
+const authSigninPassword = document.querySelector('#todo-auth-signin-password')
 
 let todos = []
 let currentUserId = null
@@ -70,6 +81,33 @@ function setLoadError(message) {
 function deploySetupHint() {
   const origin = typeof location !== 'undefined' ? location.origin : ''
   return ` Add ${origin} to Supabase → Authentication → URL Configuration (redirect URLs). In Netlify → Site configuration → Environment variables, set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (then redeploy). Enable Anonymous under Authentication → Providers.`
+}
+
+function isEmailAccountUser(user) {
+  if (!user?.email) return false
+  if (user.is_anonymous) return false
+  return true
+}
+
+function updateAuthUi(user) {
+  const emailUser = isEmailAccountUser(user)
+  if (authSignedIn) {
+    authSignedIn.classList.toggle('todo-auth-signed-in--hidden', !emailUser)
+    if (authEmailEl) authEmailEl.textContent = emailUser && user.email ? user.email : ''
+  }
+  if (authGuest) {
+    authGuest.classList.toggle('todo-auth-guest--hidden', emailUser)
+  }
+}
+
+function setActiveAuthPanel(panel) {
+  authTabs.forEach((tab) => {
+    const isActive = tab.dataset.panel === panel
+    tab.classList.toggle('todo-auth-tab--active', isActive)
+    tab.setAttribute('aria-selected', isActive ? 'true' : 'false')
+  })
+  if (authSignupForm) authSignupForm.classList.toggle('todo-auth-form--hidden', panel !== 'signup')
+  if (authSigninForm) authSigninForm.classList.toggle('todo-auth-form--hidden', panel !== 'signin')
 }
 
 async function ensureSession() {
@@ -366,11 +404,84 @@ if (retryButton) {
   })
 }
 
+authTabs.forEach((tab) => {
+  tab.addEventListener('click', () => setActiveAuthPanel(tab.dataset.panel))
+})
+
+if (authSignupForm) {
+  authSignupForm.addEventListener('submit', async (event) => {
+    event.preventDefault()
+    const email = authSignupEmail?.value.trim() ?? ''
+    const password = authSignupPassword?.value ?? ''
+    if (!email || !password) return
+
+    setStatus('')
+    const { data, error } = await supabase.auth.signUp({ email, password })
+
+    if (error) {
+      setStatus(error.message)
+      return
+    }
+
+    if (data.session?.user) {
+      if (authSignupPassword) authSignupPassword.value = ''
+      await loadTodos(data.session.user.id)
+      updateAuthUi(data.session.user)
+      return
+    }
+
+    if (data.user) {
+      setStatus('Check your email to confirm your account, then sign in.', 'notice')
+      if (authSignupPassword) authSignupPassword.value = ''
+    }
+  })
+}
+
+if (authSigninForm) {
+  authSigninForm.addEventListener('submit', async (event) => {
+    event.preventDefault()
+    const email = authSigninEmail?.value.trim() ?? ''
+    const password = authSigninPassword?.value ?? ''
+    if (!email || !password) return
+
+    setStatus('')
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+
+    if (error) {
+      setStatus(error.message)
+      return
+    }
+
+    if (data.user) {
+      if (authSigninPassword) authSigninPassword.value = ''
+      await loadTodos(data.user.id)
+      updateAuthUi(data.user)
+    }
+  })
+}
+
+if (authSignOutBtn) {
+  authSignOutBtn.addEventListener('click', async () => {
+    setStatus('')
+    await supabase.auth.signOut()
+    const user = await ensureSession()
+    if (user) {
+      await loadTodos(user.id)
+    } else {
+      todos = []
+      renderTodos()
+    }
+    updateAuthUi(user)
+  })
+}
+
 ;(async () => {
   const user = await ensureSession()
   if (!user) {
     setStatus(`Could not sign in anonymously.${deploySetupHint()}`)
+    updateAuthUi(null)
     return
   }
+  updateAuthUi(user)
   await loadTodos(user.id)
 })()

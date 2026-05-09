@@ -9,7 +9,128 @@
 }
 
 .todo-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
   margin-bottom: var(--space-lg);
+}
+
+.todo-auth {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+}
+
+.todo-auth-signed-in {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.todo-auth-signed-in--hidden {
+  display: none;
+}
+
+.todo-auth-email {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  word-break: break-all;
+}
+
+.todo-auth-sign-out {
+  padding: var(--space-xs) var(--space-md);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  background: var(--color-surface);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.todo-auth-sign-out:hover {
+  background: var(--color-bg);
+}
+
+.todo-auth-guest--hidden {
+  display: none;
+}
+
+.todo-auth-guest-intro {
+  margin: 0 0 var(--space-sm);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+
+.todo-auth-tabs {
+  display: flex;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-sm);
+}
+
+.todo-auth-tab {
+  flex: 1;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.todo-auth-tab:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+
+.todo-auth-tab--active {
+  border-color: var(--color-accent);
+  background: var(--color-accent-muted);
+  color: var(--color-accent-hover);
+}
+
+.todo-auth-form {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.todo-auth-form--hidden {
+  display: none;
+}
+
+.todo-auth-fields {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.todo-auth-input {
+  width: 100%;
+}
+
+.todo-auth-submit {
+  justify-self: start;
+  padding: 0.625rem var(--space-lg);
+  border: 0;
+  border-radius: var(--radius-md);
+  color: var(--color-surface);
+  background: var(--color-accent);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.todo-auth-submit:hover {
+  background: var(--color-accent-hover);
 }
 
 .todo-title {
