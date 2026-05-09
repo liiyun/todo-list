@@ -14,6 +14,12 @@
         </header>
 
         <p class="todo-status todo-status--hidden" role="status" aria-live="polite"></p>
+        <div class="todo-load-row">
+          <p class="todo-loading todo-loading--hidden" aria-live="polite">Loading todos…</p>
+          <button type="button" class="todo-retry-button todo-retry-button--hidden">
+            Retry loading
+          </button>
+        </div>
 
         <form class="todo-form" autocomplete="off">
           <label class="todo-label" for="todo-input">New task</label>
@@ -27,6 +33,35 @@
               maxlength="500"
             />
             <button class="todo-add-button" type="submit">Add</button>
+          </div>
+          <div class="todo-form-row todo-form-row--options">
+            <div class="todo-field">
+              <label class="todo-label" for="todo-category">Category</label>
+              <select class="todo-category-select" id="todo-category" name="category">
+                <option value="work" selected>Work</option>
+                <option value="personal">Personal</option>
+                <option value="errands">Errands</option>
+              </select>
+            </div>
+            <div class="todo-field">
+              <label class="todo-label" for="todo-priority">Priority</label>
+              <select class="todo-priority-select" id="todo-priority" name="priority">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+            <div class="todo-field">
+              <label class="todo-label" for="todo-due-date">Due date</label>
+              <input
+                class="todo-due-date"
+                id="todo-due-date"
+                name="due_date"
+                type="date"
+                placeholder="mm/dd/yyyy"
+                title="Due date (mm/dd/yyyy)"
+              />
+            </div>
           </div>
         </form>
 

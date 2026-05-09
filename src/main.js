@@ -5,18 +5,66 @@ const todoForm = document.querySelector('.todo-form')
 const todoInput = document.querySelector('.todo-input')
 const todoList = document.querySelector('.todo-list')
 const statusEl = document.querySelector('.todo-status')
+const loadingEl = document.querySelector('.todo-loading')
+const retryButton = document.querySelector('.todo-retry-button')
+const categorySelect = document.querySelector('.todo-category-select')
+const dueDateInput = document.querySelector('.todo-due-date')
+const prioritySelect = document.querySelector('.todo-priority-select')
 
 let todos = []
+let currentUserId = null
+let loadFailed = false
+let isLoadingList = false
 
-function setStatus(message) {
+const TODO_SELECT_FULL = 'id, text, is_complete, created_at, category, due_date, priority'
+const TODO_SELECT_BASE = 'id, text, is_complete, created_at'
+
+function isMissingColumnError(error) {
+  const msg = error?.message ?? ''
+  return /\bcolumn\b[\s\S]*\bdoes not exist\b/i.test(msg)
+}
+
+function setStatus(message, variant = 'error') {
   if (!statusEl) return
   if (!message) {
     statusEl.classList.add('todo-status--hidden')
+    statusEl.classList.remove('todo-status--notice')
     statusEl.textContent = ''
     return
   }
   statusEl.classList.remove('todo-status--hidden')
+  statusEl.classList.toggle('todo-status--notice', variant === 'notice')
   statusEl.textContent = message
+}
+
+function refreshUiLock() {
+  const busy = isLoadingList || loadFailed
+  if (todoForm) {
+    todoForm.querySelectorAll('input, button, select').forEach((el) => {
+      el.disabled = busy
+    })
+  }
+}
+
+function setLoading(loading) {
+  isLoadingList = loading
+  if (loadingEl) {
+    loadingEl.classList.toggle('todo-loading--hidden', !loading)
+  }
+  refreshUiLock()
+}
+
+function setLoadError(message) {
+  loadFailed = Boolean(message)
+  if (retryButton) {
+    retryButton.classList.toggle('todo-retry-button--hidden', !loadFailed)
+  }
+  if (message) {
+    setStatus(
+      `Could not load tasks. ${message} Check your connection or Supabase setup.${deploySetupHint()}`,
+    )
+  }
+  refreshUiLock()
 }
 
 function deploySetupHint() {
@@ -35,10 +83,16 @@ async function ensureSession() {
 
   if (error) {
     console.error('Failed to sign in anonymously:', error.message)
+    setStatus(`Could not sign in anonymously. ${error.message}.${deploySetupHint()}`)
     return null
   }
 
   return data.session?.user ?? data.user ?? null
+}
+
+function normalizeCategory(cat) {
+  if (cat == null || cat === '' || cat === 'general') return 'work'
+  return cat
 }
 
 function rowToTodo(row) {
@@ -46,18 +100,54 @@ function rowToTodo(row) {
     id: String(row.id),
     text: row.text,
     completed: row.is_complete,
+    createdAt: row.created_at,
+    category: normalizeCategory(row.category),
+    dueDate: row.due_date ?? null,
+    priority: row.priority ?? 'medium',
   }
 }
 
+function compareTodosByCreated(a, b) {
+  const ta = new Date(a.createdAt || 0).getTime()
+  const tb = new Date(b.createdAt || 0).getTime()
+  if (ta !== tb) return ta - tb
+  return Number(a.id) - Number(b.id)
+}
+
+function getVisibleTodos() {
+  return [...todos].sort(compareTodosByCreated)
+}
+
 async function loadTodos(userId) {
-  const { data, error } = await supabase
+  currentUserId = userId
+  loadFailed = false
+  if (retryButton) retryButton.classList.add('todo-retry-button--hidden')
+  setStatus('')
+  setLoading(true)
+
+  let { data, error } = await supabase
     .from('todos')
-    .select('id, text, is_complete, created_at')
+    .select(TODO_SELECT_FULL)
     .eq('user_id', userId)
     .order('created_at', { ascending: true })
 
+  if (error && isMissingColumnError(error)) {
+    const fallback = await supabase
+      .from('todos')
+      .select(TODO_SELECT_BASE)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true })
+    data = fallback.data
+    error = fallback.error
+  }
+
+  setLoading(false)
+
   if (error) {
     console.error('Failed to load todos:', error.message)
+    todos = []
+    renderTodos()
+    setLoadError(error.message)
     return
   }
 
@@ -65,85 +155,156 @@ async function loadTodos(userId) {
   renderTodos()
 }
 
-todoForm.addEventListener('submit', async (event) => {
-  event.preventDefault()
+if (todoForm) {
+  todoForm.addEventListener('submit', async (event) => {
+    event.preventDefault()
 
-  const text = todoInput.value.trim()
-  if (!text) return
+    const text = todoInput?.value.trim() ?? ''
+    if (!text) {
+      setStatus('Enter a task before adding.', 'notice')
+      return
+    }
 
-  const user = await ensureSession()
-  if (!user) {
-    setStatus(`Could not sign in anonymously.${deploySetupHint()}`)
-    return
-  }
+    const user = await ensureSession()
+    if (!user) {
+      setStatus(`Could not sign in anonymously.${deploySetupHint()}`)
+      return
+    }
 
-  const { data, error } = await supabase
-    .from('todos')
-    .insert({ text, user_id: user.id })
-    .select('id, text, is_complete')
-    .single()
+    setStatus('')
 
-  if (error) {
-    console.error('Failed to add todo:', error.message)
-    setStatus(`${error.message}.${deploySetupHint()}`)
-    return
-  }
+    const category = categorySelect?.value ?? 'work'
+    const dueRaw = dueDateInput?.value
+    const due_date = dueRaw || null
+    const priority = prioritySelect?.value ?? 'medium'
 
-  setStatus('')
-  todos = [...todos, rowToTodo(data)]
-  todoInput.value = ''
-  todoInput.focus()
-  renderTodos()
-})
+    let { data, error } = await supabase
+      .from('todos')
+      .insert({
+        text,
+        user_id: user.id,
+        category,
+        due_date,
+        priority,
+      })
+      .select(TODO_SELECT_FULL)
+      .single()
 
-todoList.addEventListener('change', async (event) => {
-  const checkbox = event.target.closest('.todo-checkbox')
-  if (!checkbox) return
+    if (error && isMissingColumnError(error)) {
+      const minimal = await supabase
+        .from('todos')
+        .insert({ text, user_id: user.id })
+        .select(TODO_SELECT_BASE)
+        .single()
+      data = minimal.data
+      error = minimal.error
+    }
 
-  if (!(await ensureSession())) return
+    if (error) {
+      console.error('Failed to add todo:', error.message)
+      setStatus(`${error.message}.${deploySetupHint()}`)
+      return
+    }
 
-  const id = Number(checkbox.dataset.id)
-  const completed = checkbox.checked
+    todos = [...todos, rowToTodo(data)]
+    if (todoInput) todoInput.value = ''
+    if (dueDateInput) dueDateInput.value = ''
+    todoInput?.focus()
+    renderTodos()
+  })
+}
 
-  const { error } = await supabase.from('todos').update({ is_complete: completed }).eq('id', id)
+if (todoList) {
+  todoList.addEventListener('change', async (event) => {
+    const checkbox = event.target.closest('.todo-checkbox')
+    if (!checkbox) return
 
-  if (error) {
-    console.error('Failed to update todo:', error.message)
-    checkbox.checked = !completed
-    return
-  }
+    if (!(await ensureSession())) return
 
-  todos = todos.map((todo) => (todo.id === String(id) ? { ...todo, completed } : todo))
-  renderTodos()
-})
+    const id = Number(checkbox.dataset.id)
+    const completed = checkbox.checked
 
-todoList.addEventListener('click', async (event) => {
-  const deleteButton = event.target.closest('.todo-delete-button')
-  if (!deleteButton) return
+    const { error } = await supabase.from('todos').update({ is_complete: completed }).eq('id', id)
 
-  if (!(await ensureSession())) return
+    if (error) {
+      console.error('Failed to update todo:', error.message)
+      setStatus(`Could not update task: ${error.message}`)
+      checkbox.checked = !completed
+      return
+    }
 
-  const id = Number(deleteButton.dataset.id)
+    setStatus('')
+    todos = todos.map((todo) => (todo.id === String(id) ? { ...todo, completed } : todo))
+    renderTodos()
+  })
 
-  const { error } = await supabase.from('todos').delete().eq('id', id)
+  todoList.addEventListener('click', async (event) => {
+    const deleteButton = event.target.closest('.todo-delete-button')
+    if (!deleteButton) return
 
-  if (error) {
-    console.error('Failed to delete todo:', error.message)
-    return
-  }
+    if (!(await ensureSession())) return
 
-  todos = todos.filter((todo) => todo.id !== String(id))
-  renderTodos()
-})
+    const id = Number(deleteButton.dataset.id)
+
+    const { error } = await supabase.from('todos').delete().eq('id', id)
+
+    if (error) {
+      console.error('Failed to delete todo:', error.message)
+      setStatus(`Could not delete task: ${error.message}`)
+      return
+    }
+
+    setStatus('')
+    todos = todos.filter((todo) => todo.id !== String(id))
+    renderTodos()
+  })
+}
 
 function renderTodos() {
-  todoList.replaceChildren(...todos.map(createTodoItem))
+  if (!todoList) return
+  const visible = getVisibleTodos()
+  todoList.replaceChildren(...visible.map(createTodoItem))
+}
+
+const CATEGORY_LABELS = {
+  work: 'Work',
+  personal: 'Personal',
+  errands: 'Errands',
+}
+
+function categoryClass(cat) {
+  const raw = normalizeCategory(cat).toLowerCase().replace(/\s+/g, '-')
+  const key = raw.replace(/[^a-z0-9-]/g, '') || 'work'
+  return `todo-category-badge todo-category-badge--${key}`
+}
+
+function formatDueDate(isoDate) {
+  if (!isoDate) return ''
+  const [y, m, d] = isoDate.split('-').map(Number)
+  if (!y || !m || !d) return isoDate
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
+function todayIsoDate() {
+  const t = new Date()
+  const y = t.getFullYear()
+  const m = String(t.getMonth() + 1).padStart(2, '0')
+  const d = String(t.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 function createTodoItem(todo) {
   const item = document.createElement('li')
   item.className = 'todo-item'
   if (todo.completed) item.classList.add('todo-item-completed')
+  if (todo.priority === 'high') item.classList.add('todo-item-priority-high')
+  if (todo.dueDate && !todo.completed && todo.dueDate < todayIsoDate()) {
+    item.classList.add('todo-item-overdue')
+  }
 
   const checkboxLabel = todo.completed
     ? `Mark "${todo.text}" as incomplete`
@@ -156,9 +317,37 @@ function createTodoItem(todo) {
   checkbox.dataset.id = todo.id
   checkbox.setAttribute('aria-label', checkboxLabel)
 
+  const mainCol = document.createElement('div')
+  mainCol.className = 'todo-item-main'
+
+  const metaRow = document.createElement('div')
+  metaRow.className = 'todo-item-meta'
+
+  const badge = document.createElement('span')
+  badge.className = categoryClass(todo.category)
+  badge.textContent = CATEGORY_LABELS[todo.category] ?? todo.category
+
+  metaRow.append(badge)
+
+  if (todo.dueDate) {
+    const due = document.createElement('time')
+    due.className = 'todo-item-due'
+    due.dateTime = todo.dueDate
+    due.textContent = formatDueDate(todo.dueDate)
+    metaRow.append(due)
+  }
+
+  const pri = document.createElement('span')
+  pri.className = `todo-priority-label todo-priority-label--${todo.priority}`
+  pri.textContent =
+    todo.priority === 'high' ? 'High' : todo.priority === 'low' ? 'Low' : 'Medium'
+  metaRow.append(pri)
+
   const text = document.createElement('span')
   text.className = 'todo-item-text'
   text.textContent = todo.text
+
+  mainCol.append(metaRow, text)
 
   const deleteButton = document.createElement('button')
   deleteButton.className = 'todo-delete-button'
@@ -167,8 +356,14 @@ function createTodoItem(todo) {
   deleteButton.textContent = 'Delete'
   deleteButton.setAttribute('aria-label', `Delete "${todo.text}"`)
 
-  item.append(checkbox, text, deleteButton)
+  item.append(checkbox, mainCol, deleteButton)
   return item
+}
+
+if (retryButton) {
+  retryButton.addEventListener('click', () => {
+    if (currentUserId) loadTodos(currentUserId)
+  })
 }
 
 ;(async () => {
