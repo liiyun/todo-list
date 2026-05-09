@@ -1,4 +1,8 @@
+# Environment and secrets (Vite: .env, .env.local, .env.production, etc.)
 .env
+.env.*
+!.env.example
+
 # Logs
 logs
 *.log
