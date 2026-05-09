@@ -1,4 +1,4 @@
-# Environment and secrets (Vite: .env, .env.local, .env.production, etc.)
+# Environment and secrets (single .env locally; optional .env.local overrides)
 .env
 .env.*
 !.env.example
