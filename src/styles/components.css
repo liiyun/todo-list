@@ -145,7 +145,7 @@
 .todo-status {
   margin: 0 0 var(--space-md);
   padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--color-border);
+  border: none;
   border-radius: var(--radius-md);
   background: var(--color-danger-muted);
   color: var(--color-danger);
@@ -158,7 +158,6 @@
 }
 
 .todo-status--notice {
-  border-color: var(--color-border-strong);
   background: var(--color-accent-muted);
   color: var(--color-text-muted);
 }
@@ -285,7 +284,7 @@
 }
 
 .todo-add-button,
-.todo-delete-button {
+.todo-item-actions .todo-delete-button {
   border: 0;
   border-radius: var(--radius-md);
   font-weight: 700;
@@ -296,7 +295,7 @@
 }
 
 .todo-add-button:hover,
-.todo-delete-button:hover {
+.todo-item-actions .todo-delete-button:hover {
   transform: translateY(-1px);
 }
 
@@ -308,6 +307,16 @@
 
 .todo-add-button:hover {
   background: var(--color-accent-hover);
+}
+
+.todo-item-actions .todo-delete-button {
+  color: var(--color-danger);
+  background: var(--color-danger-muted);
+}
+
+.todo-item-actions .todo-delete-button:hover {
+  color: #ffffff;
+  background: var(--color-danger);
 }
 
 .todo-list {
@@ -333,6 +342,14 @@
     border-color 160ms ease,
     background-color 160ms ease,
     opacity 160ms ease;
+}
+
+.todo-item--editing {
+  align-items: flex-start;
+}
+
+.todo-item--editing .todo-checkbox {
+  margin-top: 0.35rem;
 }
 
 .todo-item-priority-high {
@@ -433,15 +450,127 @@
   text-decoration-thickness: 2px;
 }
 
-.todo-delete-button {
-  padding: var(--space-sm) var(--space-md);
-  color: var(--color-danger);
-  background: var(--color-danger-muted);
+.todo-item-actions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: var(--space-xs);
+  align-items: center;
 }
 
-.todo-delete-button:hover {
-  color: #ffffff;
-  background: var(--color-danger);
+.todo-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.todo-icon-button svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+.todo-edit-button {
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  background: var(--color-surface);
+  font: inherit;
+}
+
+.todo-edit-button:hover {
+  background: var(--color-bg);
+}
+
+.todo-item-edit {
+  display: grid;
+  gap: var(--space-sm);
+  width: 100%;
+}
+
+.todo-item-edit-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: flex-end;
+}
+
+.todo-item-edit .todo-field {
+  flex: 1 1 6rem;
+  min-width: 0;
+}
+
+.todo-item-edit .todo-item-edit-task-field {
+  flex: 1 1 100%;
+  width: 100%;
+}
+
+.todo-item-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.todo-edit-save {
+  padding: 0.5rem var(--space-md);
+  border: 0;
+  border-radius: var(--radius-md);
+  color: var(--color-surface);
+  background: var(--color-accent);
+  font: inherit;
+  font-weight: 700;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.todo-edit-save:hover {
+  background: var(--color-accent-hover);
+}
+
+.todo-edit-cancel {
+  padding: 0.5rem var(--space-md);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.todo-edit-cancel:hover {
+  background: var(--color-bg);
+}
+
+.todo-item .todo-edit-control {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.5rem var(--space-md);
+  padding-right: calc(var(--space-md) + 1.125rem + var(--space-sm));
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  font: inherit;
+  min-width: 0;
+}
+
+.todo-item select.todo-edit-control {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 16 16'%3E%3Cpath stroke='currentColor' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-md) center;
+  background-size: 1rem;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.todo-item input.todo-edit-control[type='date'] {
+  padding-right: var(--space-md);
 }
 
 @media (max-width: 520px) {

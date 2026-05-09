@@ -43,6 +43,7 @@ let loadFailed = false
 let isLoadingList = false
 let addTodoInFlight = false
 let taskTitleDraft = ''
+let editingTodoId = null
 
 const TODO_SELECT_FULL = 'id, text, is_complete, created_at, category, due_date, priority'
 const TODO_SELECT_BASE = 'id, text, is_complete, created_at'
@@ -259,6 +260,11 @@ async function addTodoFromForm(form) {
     setStatus('')
 
     const { category, due_date, priority } = readTodoOptionsFromForm(form)
+    if (!due_date) {
+      setStatus('Due date is required.')
+      dueDateInput?.reportValidity()
+      return
+    }
 
     let { data, error } = await supabase
       .from('todos')
@@ -294,7 +300,7 @@ async function addTodoFromForm(form) {
       titleInput.value = ''
       taskTitleDraft = ''
     }
-    if (dueDateInput) dueDateInput.value = ''
+    if (dueDateInput) dueDateInput.value = todayIsoDate()
     titleInput?.focus()
     renderTodos()
   } finally {
@@ -361,6 +367,69 @@ if (todoList) {
   })
 
   todoList.addEventListener('click', async (event) => {
+    const cancelBtn = event.target.closest('.todo-edit-cancel')
+    if (cancelBtn) {
+      editingTodoId = null
+      setStatus('')
+      renderTodos()
+      return
+    }
+
+    const saveBtn = event.target.closest('.todo-edit-save')
+    if (saveBtn) {
+      const item = saveBtn.closest('.todo-item')
+      const textInput = item?.querySelector('.todo-edit-text')
+      const dueInput = item?.querySelector('.todo-edit-due')
+      const categoryEl = item?.querySelector('.todo-edit-category')
+      const priorityEl = item?.querySelector('.todo-edit-priority')
+      const id = saveBtn.dataset.id
+      const text = textInput ? String(textInput.value).trim() : ''
+      if (!text) {
+        setStatus('Enter a task before saving.', 'notice')
+        textInput?.focus()
+        return
+      }
+      const due = dueInput && String(dueInput.value).trim() ? String(dueInput.value) : ''
+      if (!due) {
+        setStatus('Due date is required.')
+        dueInput?.reportValidity()
+        return
+      }
+      const category = String(categoryEl?.value ?? 'work')
+      const priority = String(priorityEl?.value ?? 'medium')
+
+      if (!(await ensureSession())) return
+
+      setStatus('')
+      const { error } = await supabase
+        .from('todos')
+        .update({ text, category, due_date: due, priority })
+        .eq('id', Number(id))
+
+      if (error) {
+        console.error('Failed to update todo:', error.message)
+        setStatus(`Could not save changes: ${error.message}`)
+        return
+      }
+
+      todos = todos.map((t) =>
+        t.id === String(id)
+          ? { ...t, text, category: normalizeCategory(category), dueDate: due, priority }
+          : t,
+      )
+      editingTodoId = null
+      renderTodos()
+      return
+    }
+
+    const editButton = event.target.closest('.todo-edit-button')
+    if (editButton) {
+      editingTodoId = String(editButton.dataset.id)
+      setStatus('')
+      renderTodos()
+      return
+    }
+
     const deleteButton = event.target.closest('.todo-delete-button')
     if (!deleteButton) return
 
@@ -377,6 +446,7 @@ if (todoList) {
     }
 
     setStatus('')
+    if (editingTodoId === String(id)) editingTodoId = null
     todos = todos.filter((todo) => todo.id !== String(id))
     renderTodos()
   })
@@ -419,9 +489,64 @@ function todayIsoDate() {
   return `${y}-${m}-${d}`
 }
 
+if (dueDateInput && !dueDateInput.value) {
+  dueDateInput.value = todayIsoDate()
+}
+
+function populateCategoryEditSelect(select, current) {
+  const cur = normalizeCategory(current)
+  const order = ['work', 'personal', 'errands']
+  for (const value of order) {
+    const opt = document.createElement('option')
+    opt.value = value
+    opt.textContent = CATEGORY_LABELS[value]
+    if (value === cur) opt.selected = true
+    select.append(opt)
+  }
+  if (!order.includes(cur)) {
+    const opt = document.createElement('option')
+    opt.value = cur
+    opt.textContent = CATEGORY_LABELS[cur] ?? cur
+    opt.selected = true
+    select.append(opt)
+  }
+}
+
+function populatePriorityEditSelect(select, current) {
+  const cur = current === 'high' || current === 'low' ? current : 'medium'
+  const levels = [
+    { value: 'low', label: 'Low' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'high', label: 'High' },
+  ]
+  for (const { value, label } of levels) {
+    const opt = document.createElement('option')
+    opt.value = value
+    opt.textContent = label
+    if (value === cur) opt.selected = true
+    select.append(opt)
+  }
+}
+
+const SVG_ICON_PENCIL = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>`
+
+const SVG_ICON_TRASH = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>`
+
+function appendSvgIcon(button, svgMarkup) {
+  const t = document.createElement('template')
+  t.innerHTML = svgMarkup.trim()
+  const svg = t.content.firstElementChild
+  if (svg) {
+    svg.setAttribute('aria-hidden', 'true')
+    button.append(svg)
+  }
+}
+
 function createTodoItem(todo) {
+  const isEditing = editingTodoId === todo.id
   const item = document.createElement('li')
   item.className = 'todo-item'
+  if (isEditing) item.classList.add('todo-item--editing')
   if (todo.completed) item.classList.add('todo-item-completed')
   if (todo.priority === 'high') item.classList.add('todo-item-priority-high')
   if (todo.dueDate && !todo.completed && todo.dueDate < todayIsoDate()) {
@@ -436,49 +561,147 @@ function createTodoItem(todo) {
   checkbox.className = 'todo-checkbox'
   checkbox.type = 'checkbox'
   checkbox.checked = todo.completed
+  checkbox.disabled = isEditing
   checkbox.dataset.id = todo.id
   checkbox.setAttribute('aria-label', checkboxLabel)
 
   const mainCol = document.createElement('div')
   mainCol.className = 'todo-item-main'
 
-  const metaRow = document.createElement('div')
-  metaRow.className = 'todo-item-meta'
+  if (isEditing) {
+    const editWrap = document.createElement('div')
+    editWrap.className = 'todo-item-edit'
 
-  const badge = document.createElement('span')
-  badge.className = categoryClass(todo.category)
-  badge.textContent = CATEGORY_LABELS[todo.category] ?? todo.category
+    const taskField = document.createElement('div')
+    taskField.className = 'todo-field todo-item-edit-task-field'
+    const taskLabel = document.createElement('label')
+    taskLabel.className = 'todo-label'
+    taskLabel.htmlFor = `todo-edit-text-${todo.id}`
+    taskLabel.textContent = 'Task'
+    const taskInput = document.createElement('input')
+    taskInput.type = 'text'
+    taskInput.className = 'todo-edit-control todo-edit-text'
+    taskInput.id = `todo-edit-text-${todo.id}`
+    taskInput.maxLength = 500
+    taskInput.autocomplete = 'off'
+    taskInput.value = todo.text
+    taskField.append(taskLabel, taskInput)
 
-  metaRow.append(badge)
+    const editRow = document.createElement('div')
+    editRow.className = 'todo-item-edit-row'
 
-  if (todo.dueDate) {
-    const due = document.createElement('time')
-    due.className = 'todo-item-due'
-    due.dateTime = todo.dueDate
-    due.textContent = formatDueDate(todo.dueDate)
-    metaRow.append(due)
+    const catField = document.createElement('div')
+    catField.className = 'todo-field'
+    const catLabel = document.createElement('label')
+    catLabel.className = 'todo-label'
+    catLabel.htmlFor = `todo-edit-cat-${todo.id}`
+    catLabel.textContent = 'Category'
+    const catSelect = document.createElement('select')
+    catSelect.className = 'todo-edit-control todo-edit-category'
+    catSelect.id = `todo-edit-cat-${todo.id}`
+    populateCategoryEditSelect(catSelect, todo.category)
+    catField.append(catLabel, catSelect)
+
+    const priField = document.createElement('div')
+    priField.className = 'todo-field'
+    const priLabel = document.createElement('label')
+    priLabel.className = 'todo-label'
+    priLabel.htmlFor = `todo-edit-pri-${todo.id}`
+    priLabel.textContent = 'Priority'
+    const priSelect = document.createElement('select')
+    priSelect.className = 'todo-edit-control todo-edit-priority'
+    priSelect.id = `todo-edit-pri-${todo.id}`
+    populatePriorityEditSelect(priSelect, todo.priority)
+    priField.append(priLabel, priSelect)
+
+    const dueField = document.createElement('div')
+    dueField.className = 'todo-field'
+    const dueLabel = document.createElement('label')
+    dueLabel.className = 'todo-label'
+    dueLabel.htmlFor = `todo-edit-due-${todo.id}`
+    dueLabel.textContent = 'Due date'
+    const dueInput = document.createElement('input')
+    dueInput.className = 'todo-edit-control todo-edit-due'
+    dueInput.id = `todo-edit-due-${todo.id}`
+    dueInput.type = 'date'
+    dueInput.required = true
+    dueInput.value = todo.dueDate ?? ''
+    dueField.append(dueLabel, dueInput)
+
+    editRow.append(catField, priField, dueField)
+
+    const editActions = document.createElement('div')
+    editActions.className = 'todo-item-edit-actions'
+    const saveBtn = document.createElement('button')
+    saveBtn.type = 'button'
+    saveBtn.className = 'todo-edit-save'
+    saveBtn.dataset.id = todo.id
+    saveBtn.textContent = 'Save'
+    const cancelBtn = document.createElement('button')
+    cancelBtn.type = 'button'
+    cancelBtn.className = 'todo-edit-cancel'
+    cancelBtn.textContent = 'Cancel'
+    editActions.append(saveBtn, cancelBtn)
+
+    editWrap.append(taskField, editRow, editActions)
+    mainCol.append(editWrap)
+  } else {
+    const metaRow = document.createElement('div')
+    metaRow.className = 'todo-item-meta'
+
+    const badge = document.createElement('span')
+    badge.className = categoryClass(todo.category)
+    badge.textContent = CATEGORY_LABELS[todo.category] ?? todo.category
+
+    metaRow.append(badge)
+
+    if (todo.dueDate) {
+      const due = document.createElement('time')
+      due.className = 'todo-item-due'
+      due.dateTime = todo.dueDate
+      due.textContent = formatDueDate(todo.dueDate)
+      metaRow.append(due)
+    }
+
+    const pri = document.createElement('span')
+    pri.className = `todo-priority-label todo-priority-label--${todo.priority}`
+    pri.textContent =
+      todo.priority === 'high' ? 'High' : todo.priority === 'low' ? 'Low' : 'Medium'
+    metaRow.append(pri)
+
+    const text = document.createElement('span')
+    text.className = 'todo-item-text'
+    text.textContent = todo.text
+
+    mainCol.append(metaRow, text)
   }
 
-  const pri = document.createElement('span')
-  pri.className = `todo-priority-label todo-priority-label--${todo.priority}`
-  pri.textContent =
-    todo.priority === 'high' ? 'High' : todo.priority === 'low' ? 'Low' : 'Medium'
-  metaRow.append(pri)
+  const actions = document.createElement('div')
+  actions.className = 'todo-item-actions'
 
-  const text = document.createElement('span')
-  text.className = 'todo-item-text'
-  text.textContent = todo.text
-
-  mainCol.append(metaRow, text)
+  if (!isEditing) {
+    const editButton = document.createElement('button')
+    editButton.className = 'todo-edit-button todo-icon-button'
+    editButton.type = 'button'
+    editButton.dataset.id = todo.id
+    editButton.setAttribute(
+      'aria-label',
+      `Edit task, category, priority, and due date for "${todo.text}"`,
+    )
+    appendSvgIcon(editButton, SVG_ICON_PENCIL)
+    actions.append(editButton)
+  }
 
   const deleteButton = document.createElement('button')
-  deleteButton.className = 'todo-delete-button'
+  deleteButton.className = 'todo-delete-button todo-icon-button'
   deleteButton.type = 'button'
   deleteButton.dataset.id = todo.id
-  deleteButton.textContent = 'Delete'
   deleteButton.setAttribute('aria-label', `Delete "${todo.text}"`)
+  appendSvgIcon(deleteButton, SVG_ICON_TRASH)
 
-  item.append(checkbox, mainCol, deleteButton)
+  actions.append(deleteButton)
+
+  item.append(checkbox, mainCol, actions)
   return item
 }
 
