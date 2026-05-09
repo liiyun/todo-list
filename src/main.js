@@ -2,7 +2,22 @@ import './styles/index.css'
 import { supabase } from './supabase.js'
 
 const todoForm = document.querySelector('.todo-form')
-const todoInput = document.querySelector('.todo-input')
+
+function isTaskTitleField(el) {
+  return el instanceof HTMLInputElement && (el.id === 'todo-input' || el.name === 'task_title')
+}
+
+function getTaskTitleInput(form) {
+  const byId = document.getElementById('todo-input')
+  if (byId instanceof HTMLInputElement) return byId
+  if (!form) return null
+  const el = form.elements.namedItem('task_title')
+  if (el instanceof HTMLInputElement) return el
+  const scoped = form.querySelector('#todo-input')
+  return scoped instanceof HTMLInputElement ? scoped : null
+}
+
+const todoAddButton = document.querySelector('.todo-add-button')
 const todoList = document.querySelector('.todo-list')
 const statusEl = document.querySelector('.todo-status')
 const loadingEl = document.querySelector('.todo-loading')
@@ -26,6 +41,8 @@ let todos = []
 let currentUserId = null
 let loadFailed = false
 let isLoadingList = false
+let addTodoInFlight = false
+let taskTitleDraft = ''
 
 const TODO_SELECT_FULL = 'id, text, is_complete, created_at, category, due_date, priority'
 const TODO_SELECT_BASE = 'id, text, is_complete, created_at'
@@ -49,7 +66,7 @@ function setStatus(message, variant = 'error') {
 }
 
 function refreshUiLock() {
-  const busy = isLoadingList || loadFailed
+  const busy = isLoadingList || loadFailed || addTodoInFlight
   if (todoForm) {
     todoForm.querySelectorAll('input, button, select').forEach((el) => {
       el.disabled = busy
@@ -193,16 +210,46 @@ async function loadTodos(userId) {
   renderTodos()
 }
 
-if (todoForm) {
-  todoForm.addEventListener('submit', async (event) => {
-    event.preventDefault()
+function readTaskTitleFromForm(form) {
+  const input = getTaskTitleInput(form)
+  let text = input ? String(input.value).trim() : ''
+  if (!text) {
+    text = String(form ? new FormData(form).get('task_title') ?? '' : '').trim()
+  }
+  if (!text) {
+    text = String(taskTitleDraft).trim()
+  }
+  return text
+}
 
-    const text = todoInput?.value.trim() ?? ''
-    if (!text) {
-      setStatus('Enter a task before adding.', 'notice')
-      return
-    }
+function readTodoOptionsFromForm(form) {
+  const fd = new FormData(form)
+  const category = String(fd.get('category') ?? categorySelect?.value ?? 'work')
+  const dueVal = fd.get('due_date')
+  const due_date =
+    dueVal && String(dueVal).trim()
+      ? String(dueVal)
+      : (dueDateInput?.value && String(dueDateInput.value).trim()) || null
+  const priority = String(fd.get('priority') ?? prioritySelect?.value ?? 'medium')
+  return { category, due_date, priority }
+}
 
+async function addTodoFromForm(form) {
+  if (!form || addTodoInFlight) return
+
+  addTodoInFlight = true
+
+  const text = readTaskTitleFromForm(form)
+  if (!text) {
+    addTodoInFlight = false
+    refreshUiLock()
+    setStatus('Enter a task before adding.', 'notice')
+    return
+  }
+
+  refreshUiLock()
+
+  try {
     const user = await ensureSession()
     if (!user) {
       setStatus(`Could not sign in anonymously.${deploySetupHint()}`)
@@ -211,10 +258,7 @@ if (todoForm) {
 
     setStatus('')
 
-    const category = categorySelect?.value ?? 'work'
-    const dueRaw = dueDateInput?.value
-    const due_date = dueRaw || null
-    const priority = prioritySelect?.value ?? 'medium'
+    const { category, due_date, priority } = readTodoOptionsFromForm(form)
 
     let { data, error } = await supabase
       .from('todos')
@@ -245,10 +289,50 @@ if (todoForm) {
     }
 
     todos = [...todos, rowToTodo(data)]
-    if (todoInput) todoInput.value = ''
+    const titleInput = getTaskTitleInput(form)
+    if (titleInput) {
+      titleInput.value = ''
+      taskTitleDraft = ''
+    }
     if (dueDateInput) dueDateInput.value = ''
-    todoInput?.focus()
+    titleInput?.focus()
     renderTodos()
+  } finally {
+    addTodoInFlight = false
+    refreshUiLock()
+  }
+}
+
+if (todoForm) {
+  todoForm.addEventListener('input', (event) => {
+    const t = event.target
+    if (isTaskTitleField(t)) {
+      taskTitleDraft = t.value
+      setStatus('')
+    }
+  })
+
+  todoForm.addEventListener('change', (event) => {
+    const t = event.target
+    if (isTaskTitleField(t)) {
+      taskTitleDraft = t.value
+    }
+  })
+
+  todoForm.addEventListener('keydown', (event) => {
+    const t = event.target
+    if (!isTaskTitleField(t)) return
+    if (event.key !== 'Enter' || event.isComposing) return
+    event.preventDefault()
+    void addTodoFromForm(todoForm)
+  })
+
+  todoForm.addEventListener('submit', (event) => {
+    event.preventDefault()
+  })
+
+  todoAddButton?.addEventListener('click', () => {
+    void addTodoFromForm(todoForm)
   })
 }
 
