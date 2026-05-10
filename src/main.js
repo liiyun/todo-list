@@ -25,6 +25,8 @@ const retryButton = document.querySelector('.todo-retry-button')
 const categorySelect = document.querySelector('.todo-category-select')
 const dueDateInput = document.querySelector('.todo-due-date')
 const prioritySelect = document.querySelector('.todo-priority-select')
+const sortSelect = document.querySelector('.todo-sort-select')
+const filterButtons = document.querySelectorAll('.todo-filter-btn')
 const authSignedIn = document.querySelector('.todo-auth-signed-in')
 const authGuest = document.querySelector('.todo-auth-guest')
 const authEmailEl = document.querySelector('.todo-auth-email')
@@ -37,6 +39,10 @@ const authSignupPassword = document.querySelector('#todo-auth-signup-password')
 const authSigninEmail = document.querySelector('#todo-auth-signin-email')
 const authSigninPassword = document.querySelector('#todo-auth-signin-password')
 
+const authDialog = document.querySelector('#todo-auth-dialog')
+const authOpenBtns = document.querySelectorAll('[data-open-auth]')
+const authDialogClose = document.querySelector('.todo-auth-dialog-close')
+
 let todos = []
 let currentUserId = null
 let loadFailed = false
@@ -44,6 +50,11 @@ let isLoadingList = false
 let addTodoInFlight = false
 let taskTitleDraft = ''
 let editingTodoId = null
+let filterCategory = 'all'
+let sortBy = 'due'
+let lastAddedTodoId = null
+let touchLongPressTimer = null
+let touchLongPressStamp = null
 
 const TODO_SELECT_FULL = 'id, text, is_complete, created_at, category, due_date, priority'
 const TODO_SELECT_BASE = 'id, text, is_complete, created_at'
@@ -128,6 +139,14 @@ function setActiveAuthPanel(panel) {
   if (authSigninForm) authSigninForm.classList.toggle('todo-auth-form--hidden', panel !== 'signin')
 }
 
+function openAuthDialog(panel) {
+  if (!authDialog || (panel !== 'signin' && panel !== 'signup')) return
+  setActiveAuthPanel(panel)
+  authDialog.showModal()
+  const input = panel === 'signup' ? authSignupEmail : authSigninEmail
+  queueMicrotask(() => input?.focus())
+}
+
 async function completeAuthCodeFromUrl() {
   if (!supabase || typeof window === 'undefined') return
   const params = new URLSearchParams(window.location.search)
@@ -199,8 +218,45 @@ function compareTodosByCreated(a, b) {
   return Number(a.id) - Number(b.id)
 }
 
+function priorityRank(p) {
+  if (p === 'high') return 0
+  if (p === 'low') return 2
+  return 1
+}
+
+function compareTodosByPriority(a, b) {
+  const ra = priorityRank(a.priority)
+  const rb = priorityRank(b.priority)
+  if (ra !== rb) return ra - rb
+  return compareTodosByCreated(a, b)
+}
+
+function compareTodosByDue(a, b) {
+  const da = a.dueDate && String(a.dueDate).trim() ? a.dueDate : null
+  const db = b.dueDate && String(b.dueDate).trim() ? b.dueDate : null
+  if (!da && !db) return compareTodosByCreated(a, b)
+  if (!da) return 1
+  if (!db) return -1
+  if (da !== db) return da < db ? -1 : 1
+  return compareTodosByCreated(a, b)
+}
+
 function getVisibleTodos() {
-  return [...todos].sort(compareTodosByCreated)
+  let list = [...todos]
+  if (filterCategory !== 'all') {
+    list = list.filter((t) => normalizeCategory(t.category) === filterCategory)
+  }
+  if (sortBy === 'due') list.sort(compareTodosByDue)
+  else if (sortBy === 'priority') list.sort(compareTodosByPriority)
+  else list.sort(compareTodosByCreated)
+  return list
+}
+
+function updateFilterButtonsUi() {
+  filterButtons.forEach((btn) => {
+    const v = btn.dataset.filter
+    btn.classList.toggle('todo-filter-btn--active', v === filterCategory)
+  })
 }
 
 const CATEGORY_LABELS = {
@@ -209,10 +265,17 @@ const CATEGORY_LABELS = {
   groceries: 'Groceries',
 }
 
-function categoryClass(cat) {
-  const raw = normalizeCategory(cat).toLowerCase().replace(/\s+/g, '-')
-  const key = raw.replace(/[^a-z0-9-]/g, '') || 'work'
-  return `todo-category-badge todo-category-badge--${key}`
+const CATEGORY_POSTMARK = {
+  work: 'WORK',
+  personal: 'PERSONAL',
+  groceries: 'GROCERIES',
+}
+
+function stampRotationDeg(id) {
+  let h = 0
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0
+  const n = (h % 5) - 2
+  return n * 0.45
 }
 
 function formatDueDate(isoDate) {
@@ -226,6 +289,15 @@ function formatDueDate(isoDate) {
   })
 }
 
+/** Denomination style e.g. 10-MAY */
+function formatDenomDate(isoDate) {
+  if (!isoDate) return '—'
+  const [y, m, d] = isoDate.split('-').map(Number)
+  if (!y || !m || !d) return isoDate
+  const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+  return `${d}-${months[m - 1] ?? '—'}`
+}
+
 function todayIsoDate() {
   const t = new Date()
   const y = t.getFullYear()
@@ -237,6 +309,8 @@ function todayIsoDate() {
 if (dueDateInput && !dueDateInput.value) {
   dueDateInput.value = todayIsoDate()
 }
+
+if (sortSelect) sortSelect.value = sortBy
 
 function populateCategoryEditSelect(select, current) {
   const cur = normalizeCategory(current)
@@ -277,6 +351,14 @@ const SVG_ICON_PENCIL = `<svg xmlns="http://www.w3.org/2000/svg" width="20" heig
 
 const SVG_ICON_TRASH = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>`
 
+const SVG_POSTMARK_RING = `<svg viewBox="0 0 64 44" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="20" cy="22" r="18" stroke="currentColor" stroke-width="1.8" opacity="0.88"/><circle cx="20" cy="22" r="15" stroke="currentColor" stroke-width="0.8" stroke-dasharray="3 2" opacity="0.76"/><path d="M34 11c8 .5 16 1.8 24 4M35 18c7.5.2 15.2 1.2 22.8 3.4M34 25c7.7.1 15.2 1 22.5 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity="0.65"/></svg>`
+
+const SVG_WATERMARK = {
+  work: '',
+  personal: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M24 8c-6 0-11 5-11 11v4h-3v16h28V23h-3v-4c0-6-5-11-11-11z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M19 19v4h10v-4c0-3-2-5-5-5s-5 2-5 5z" stroke="currentColor" stroke-width="1"/></svg>`,
+  groceries: '',
+}
+
 function appendSvgIcon(button, svgMarkup) {
   const t = document.createElement('template')
   t.innerHTML = svgMarkup.trim()
@@ -287,33 +369,100 @@ function appendSvgIcon(button, svgMarkup) {
   }
 }
 
-function createTodoItem(todo) {
-  const isEditing = editingTodoId === todo.id
-  const item = document.createElement('li')
-  item.className = 'todo-item'
-  if (isEditing) item.classList.add('todo-item--editing')
-  if (todo.completed) item.classList.add('todo-item-completed')
-  if (todo.priority === 'high') item.classList.add('todo-item-priority-high')
-  if (todo.dueDate && !todo.completed && todo.dueDate < todayIsoDate()) {
-    item.classList.add('todo-item-overdue')
+function clearTouchLongPress() {
+  if (touchLongPressTimer != null) {
+    clearTimeout(touchLongPressTimer)
+    touchLongPressTimer = null
+  }
+  touchLongPressStamp = null
+}
+
+function bindStampInteractions(li) {
+  const onPointerDown = (e) => {
+    if (e.pointerType !== 'touch') return
+    if (li.classList.contains('todo-stamp--editing')) return
+    if (e.target.closest('.todo-stamp-actions')) return
+    clearTouchLongPress()
+    touchLongPressStamp = li
+    touchLongPressTimer = window.setTimeout(() => {
+      touchLongPressTimer = null
+      touchLongPressStamp = null
+      li.classList.add('todo-stamp--menu-open')
+    }, 550)
+  }
+  const onPointerEnd = () => {
+    clearTouchLongPress()
+  }
+  li.addEventListener('pointerdown', onPointerDown)
+  li.addEventListener('pointerup', onPointerEnd)
+  li.addEventListener('pointercancel', onPointerEnd)
+}
+
+async function toggleTodoComplete(idStr, nextCompleted) {
+  if (!supabase) return
+  if (!(await ensureSession())) return
+
+  const id = Number(idStr)
+  const { error } = await supabase.from('todos').update({ is_complete: nextCompleted }).eq('id', id)
+
+  if (error) {
+    console.error('Failed to update todo:', error.message)
+    setStatus(`Could not update task: ${error.message}`)
+    return
   }
 
-  const checkboxLabel = todo.completed
-    ? `Mark "${todo.text}" as incomplete`
-    : `Mark "${todo.text}" as complete`
+  setStatus('')
+  todos = todos.map((todo) => (todo.id === idStr ? { ...todo, completed: nextCompleted } : todo))
+  renderTodos()
+}
 
-  const checkbox = document.createElement('input')
-  checkbox.className = 'todo-checkbox'
-  checkbox.type = 'checkbox'
-  checkbox.checked = todo.completed
-  checkbox.disabled = isEditing
-  checkbox.dataset.id = todo.id
-  checkbox.setAttribute('aria-label', checkboxLabel)
+function createSkeletonStamps(count) {
+  const frag = document.createDocumentFragment()
+  for (let i = 0; i < count; i++) {
+    const li = document.createElement('li')
+    li.className = 'todo-stamp todo-stamp--skeleton'
+    const box = document.createElement('div')
+    box.className = 'todo-stamp-skel'
+    li.append(box)
+    frag.append(li)
+  }
+  return frag
+}
 
-  const mainCol = document.createElement('div')
-  mainCol.className = 'todo-item-main'
+function createEmptyState() {
+  const li = document.createElement('li')
+  li.className = 'todo-stamp-empty'
+  const p = document.createElement('p')
+  if (todos.length === 0) {
+    p.textContent =
+      'No stamps in the album yet. Press a new task into the collection with the stamp press above.'
+  } else {
+    p.textContent = 'No stamps match this filter. Try another category or choose “All stamps.”'
+  }
+  li.append(p)
+  return li
+}
+
+function createTodoItem(todo, visibleIndex) {
+  const isEditing = editingTodoId === todo.id
+  const item = document.createElement('li')
+  item.className = 'todo-stamp'
+  item.dataset.id = todo.id
+  item.style.setProperty('--stamp-rot', `${stampRotationDeg(todo.id)}deg`)
+
+  if (isEditing) item.classList.add('todo-stamp--editing')
+  if (todo.completed) item.classList.add('todo-stamp--completed')
+  if (todo.id === lastAddedTodoId) item.classList.add('todo-stamp--enter')
+
+  const pri = todo.priority === 'high' || todo.priority === 'low' ? todo.priority : 'medium'
+  if (todo.dueDate && !todo.completed && todo.dueDate < todayIsoDate()) {
+    item.classList.add('todo-stamp--overdue')
+  }
 
   if (isEditing) {
+    const wrap = document.createElement('div')
+    wrap.className = 'todo-stamp-edit'
+
     const editWrap = document.createElement('div')
     editWrap.className = 'todo-item-edit'
 
@@ -389,53 +538,99 @@ function createTodoItem(todo) {
     editActions.append(saveBtn, cancelBtn)
 
     editWrap.append(taskField, editRow, editActions)
-    mainCol.append(editWrap)
-  } else {
-    const metaRow = document.createElement('div')
-    metaRow.className = 'todo-item-meta'
-
-    const badge = document.createElement('span')
-    badge.className = categoryClass(todo.category)
-    badge.textContent = CATEGORY_LABELS[todo.category] ?? todo.category
-
-    metaRow.append(badge)
-
-    if (todo.dueDate) {
-      const due = document.createElement('time')
-      due.className = 'todo-item-due'
-      due.dateTime = todo.dueDate
-      due.textContent = formatDueDate(todo.dueDate)
-      metaRow.append(due)
-    }
-
-    const pri = document.createElement('span')
-    pri.className = `todo-priority-label todo-priority-label--${todo.priority}`
-    pri.textContent =
-      todo.priority === 'high' ? 'High' : todo.priority === 'low' ? 'Low' : 'Medium'
-    metaRow.append(pri)
-
-    const text = document.createElement('span')
-    text.className = 'todo-item-text'
-    text.textContent = todo.text
-
-    mainCol.append(metaRow, text)
+    wrap.append(editWrap)
+    item.append(wrap)
+    return item
   }
+
+  const catKey = normalizeCategory(todo.category)
+  item.classList.add(`todo-stamp--category-${catKey}`)
+
+  const face = document.createElement('button')
+  face.type = 'button'
+  face.className = 'todo-stamp-face'
+  face.dataset.id = todo.id
+  face.setAttribute('aria-pressed', todo.completed ? 'true' : 'false')
+  const toggleLabel = todo.completed
+    ? `Mark stamp "${todo.text}" as not done`
+    : `Mark stamp "${todo.text}" as done`
+  face.setAttribute('aria-label', toggleLabel)
+
+  const serrated = document.createElement('div')
+  serrated.className = `todo-stamp-serrated todo-stamp-serrated--${pri} todo-stamp-serrated--${catKey}`
+
+  const paper = document.createElement('div')
+  paper.className = 'todo-stamp-paper'
+
+  const priSr = document.createElement('span')
+  priSr.className = 'todo-sr-only'
+  priSr.textContent =
+    todo.priority === 'high'
+      ? 'High priority'
+      : todo.priority === 'low'
+        ? 'Low priority'
+        : 'Medium priority'
+
+  const postmark = document.createElement('div')
+  postmark.className = `todo-stamp-postmark todo-stamp-postmark--${catKey}`
+  postmark.innerHTML = SVG_POSTMARK_RING
+  const pmText = document.createElement('span')
+  pmText.textContent = CATEGORY_POSTMARK[catKey] ?? catKey
+  postmark.append(pmText)
+
+  const serial = document.createElement('span')
+  serial.className = 'todo-stamp-serial'
+  serial.textContent = `No.\n${String(visibleIndex + 1).padStart(3, '0')}`
+
+  const wm = document.createElement('div')
+  wm.className = 'todo-stamp-watermark'
+  wm.innerHTML = SVG_WATERMARK[catKey] ?? SVG_WATERMARK.work
+
+  const title = document.createElement('p')
+  title.className = 'todo-stamp-title'
+  title.textContent = todo.text
+
+  const denom = document.createElement('time')
+  denom.className = 'todo-stamp-denom'
+  if (todo.dueDate) denom.dateTime = todo.dueDate
+  denom.textContent = todo.dueDate ? formatDenomDate(todo.dueDate) : '—'
+
+  paper.append(priSr, postmark, serial, wm, title, denom)
+
+  if (todo.completed) {
+    const done = document.createElement('div')
+    done.className = 'todo-stamp-done'
+    const doneText = document.createElement('span')
+    doneText.textContent = 'Done'
+    done.append(doneText)
+    paper.append(done)
+  }
+
+  serrated.append(paper)
+  face.append(serrated)
 
   const actions = document.createElement('div')
-  actions.className = 'todo-item-actions'
+  actions.className = 'todo-stamp-actions'
 
-  if (!isEditing) {
-    const editButton = document.createElement('button')
-    editButton.className = 'todo-edit-button todo-icon-button'
-    editButton.type = 'button'
-    editButton.dataset.id = todo.id
-    editButton.setAttribute(
-      'aria-label',
-      `Edit task, category, priority, and due date for "${todo.text}"`,
-    )
-    appendSvgIcon(editButton, SVG_ICON_PENCIL)
-    actions.append(editButton)
-  }
+  const inner = document.createElement('div')
+  inner.className = 'todo-stamp-actions-inner'
+
+  const menuBtn = document.createElement('button')
+  menuBtn.type = 'button'
+  menuBtn.className = 'todo-stamp-menu'
+  menuBtn.setAttribute('aria-label', 'More options')
+  menuBtn.setAttribute('aria-expanded', 'false')
+  menuBtn.textContent = '⋯'
+
+  const editButton = document.createElement('button')
+  editButton.className = 'todo-edit-button todo-icon-button'
+  editButton.type = 'button'
+  editButton.dataset.id = todo.id
+  editButton.setAttribute(
+    'aria-label',
+    `Edit task, category, priority, and due date for "${todo.text}"`,
+  )
+  appendSvgIcon(editButton, SVG_ICON_PENCIL)
 
   const deleteButton = document.createElement('button')
   deleteButton.className = 'todo-delete-button todo-icon-button'
@@ -444,16 +639,50 @@ function createTodoItem(todo) {
   deleteButton.setAttribute('aria-label', `Delete "${todo.text}"`)
   appendSvgIcon(deleteButton, SVG_ICON_TRASH)
 
-  actions.append(deleteButton)
+  inner.append(menuBtn, editButton, deleteButton)
+  actions.append(inner)
 
-  item.append(checkbox, mainCol, actions)
+  item.append(face, actions)
+
+  bindStampInteractions(item)
+
+  menuBtn.addEventListener('click', (e) => {
+    e.stopPropagation()
+    e.preventDefault()
+    const open = item.classList.toggle('todo-stamp--menu-open')
+    menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false')
+  })
+
   return item
 }
 
 function renderTodos() {
   if (!todoList) return
+
+  if (isLoadingList && todos.length === 0 && !loadFailed) {
+    todoList.classList.add('todo-list--skeleton')
+    todoList.replaceChildren(createSkeletonStamps(6))
+    return
+  }
+
+  todoList.classList.remove('todo-list--skeleton')
+
   const visible = getVisibleTodos()
-  todoList.replaceChildren(...visible.map(createTodoItem))
+  updateFilterButtonsUi()
+
+  if (visible.length === 0 && !isLoadingList) {
+    todoList.replaceChildren(createEmptyState())
+    return
+  }
+
+  todoList.replaceChildren(...visible.map((t, i) => createTodoItem(t, i)))
+
+  if (lastAddedTodoId) {
+    const id = lastAddedTodoId
+    window.setTimeout(() => {
+      if (lastAddedTodoId === id) lastAddedTodoId = null
+    }, 700)
+  }
 }
 
 async function loadTodos(userId) {
@@ -462,6 +691,7 @@ async function loadTodos(userId) {
   if (retryButton) retryButton.classList.add('todo-retry-button--hidden')
   setStatus('')
   setLoading(true)
+  renderTodos()
 
   if (!supabase) {
     setLoading(false)
@@ -536,6 +766,14 @@ function readTodoOptionsFromForm(form) {
   return { category, due_date, priority }
 }
 
+function triggerAddButtonBounce() {
+  if (!todoAddButton) return
+  todoAddButton.classList.remove('todo-add-button--bounce')
+  void todoAddButton.offsetWidth
+  todoAddButton.classList.add('todo-add-button--bounce')
+  window.setTimeout(() => todoAddButton.classList.remove('todo-add-button--bounce'), 500)
+}
+
 async function addTodoFromForm(form) {
   if (!form || addTodoInFlight) return
 
@@ -544,9 +782,7 @@ async function addTodoFromForm(form) {
   if (!supabase) {
     addTodoInFlight = false
     refreshUiLock()
-    setStatus(
-      `Missing Supabase environment variables.${deploySetupHint()}`,
-    )
+    setStatus(`Missing Supabase environment variables.${deploySetupHint()}`)
     return
   }
 
@@ -604,7 +840,9 @@ async function addTodoFromForm(form) {
       return
     }
 
-    todos = [...todos, rowToTodo(data)]
+    const added = rowToTodo(data)
+    todos = [...todos, added]
+    lastAddedTodoId = added.id
     const titleInput = getTaskTitleInput(form)
     if (titleInput) {
       titleInput.value = ''
@@ -612,6 +850,7 @@ async function addTodoFromForm(form) {
     }
     if (dueDateInput) dueDateInput.value = todayIsoDate()
     titleInput?.focus()
+    triggerAddButtonBounce()
     renderTodos()
   } finally {
     addTodoInFlight = false
@@ -620,245 +859,270 @@ async function addTodoFromForm(form) {
 }
 
 if (isSupabaseConfigured) {
-if (todoForm) {
-  todoForm.addEventListener('input', (event) => {
-    const t = event.target
-    if (isTaskTitleField(t)) {
-      taskTitleDraft = t.value
-      setStatus('')
-    }
+  filterButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const v = btn.dataset.filter
+      if (!v) return
+      filterCategory = v
+      renderTodos()
+    })
   })
 
-  todoForm.addEventListener('change', (event) => {
-    const t = event.target
-    if (isTaskTitleField(t)) {
-      taskTitleDraft = t.value
-    }
-  })
-
-  todoForm.addEventListener('keydown', (event) => {
-    const t = event.target
-    if (!isTaskTitleField(t)) return
-    if (event.key !== 'Enter' || event.isComposing) return
-    event.preventDefault()
-    void addTodoFromForm(todoForm)
-  })
-
-  todoForm.addEventListener('submit', (event) => {
-    event.preventDefault()
-  })
-
-  todoAddButton?.addEventListener('click', () => {
-    void addTodoFromForm(todoForm)
-  })
-}
-
-if (todoList) {
-  todoList.addEventListener('change', async (event) => {
-    const checkbox = event.target.closest('.todo-checkbox')
-    if (!checkbox) return
-
-    if (!(await ensureSession())) return
-
-    const id = Number(checkbox.dataset.id)
-    const completed = checkbox.checked
-
-    const { error } = await supabase.from('todos').update({ is_complete: completed }).eq('id', id)
-
-    if (error) {
-      console.error('Failed to update todo:', error.message)
-      setStatus(`Could not update task: ${error.message}`)
-      checkbox.checked = !completed
-      return
-    }
-
-    setStatus('')
-    todos = todos.map((todo) => (todo.id === String(id) ? { ...todo, completed } : todo))
+  sortSelect?.addEventListener('change', () => {
+    sortBy = sortSelect.value === 'priority' || sortSelect.value === 'created' ? sortSelect.value : 'due'
     renderTodos()
   })
 
-  todoList.addEventListener('click', async (event) => {
-    const cancelBtn = event.target.closest('.todo-edit-cancel')
-    if (cancelBtn) {
-      editingTodoId = null
-      setStatus('')
-      renderTodos()
-      return
-    }
+  document.addEventListener('click', (e) => {
+    const t = e.target
+    if (!(t instanceof Element)) return
+    if (t.closest('.todo-stamp-actions')) return
+    document.querySelectorAll('.todo-stamp--menu-open').forEach((el) => {
+      el.classList.remove('todo-stamp--menu-open')
+      el.querySelector('.todo-stamp-menu')?.setAttribute('aria-expanded', 'false')
+    })
+  })
 
-    const saveBtn = event.target.closest('.todo-edit-save')
-    if (saveBtn) {
-      const item = saveBtn.closest('.todo-item')
-      const textInput = item?.querySelector('.todo-edit-text')
-      const dueInput = item?.querySelector('.todo-edit-due')
-      const categoryEl = item?.querySelector('.todo-edit-category')
-      const priorityEl = item?.querySelector('.todo-edit-priority')
-      const id = saveBtn.dataset.id
-      const text = textInput ? String(textInput.value).trim() : ''
-      if (!text) {
-        setStatus('Enter a task before saving.', 'notice')
-        textInput?.focus()
+  if (todoForm) {
+    todoForm.addEventListener('input', (event) => {
+      const t = event.target
+      if (isTaskTitleField(t)) {
+        taskTitleDraft = t.value
+        setStatus('')
+      }
+    })
+
+    todoForm.addEventListener('change', (event) => {
+      const t = event.target
+      if (isTaskTitleField(t)) {
+        taskTitleDraft = t.value
+      }
+    })
+
+    todoForm.addEventListener('keydown', (event) => {
+      const t = event.target
+      if (!isTaskTitleField(t)) return
+      if (event.key !== 'Enter' || event.isComposing) return
+      event.preventDefault()
+      void addTodoFromForm(todoForm)
+    })
+
+    todoForm.addEventListener('submit', (event) => {
+      event.preventDefault()
+    })
+
+    todoAddButton?.addEventListener('click', () => {
+      void addTodoFromForm(todoForm)
+    })
+  }
+
+  if (todoList) {
+    todoList.addEventListener('click', async (event) => {
+      const face = event.target.closest('.todo-stamp-face')
+      if (face && !event.target.closest('.todo-stamp-actions')) {
+        event.preventDefault()
+        const id = face.dataset.id
+        if (!id) return
+        const todo = todos.find((t) => t.id === id)
+        if (!todo || editingTodoId === id) return
+        void toggleTodoComplete(id, !todo.completed)
         return
       }
-      const due = dueInput && String(dueInput.value).trim() ? String(dueInput.value) : ''
-      if (!due) {
-        setStatus('Due date is required.')
-        dueInput?.reportValidity()
+
+      const cancelBtn = event.target.closest('.todo-edit-cancel')
+      if (cancelBtn) {
+        editingTodoId = null
+        setStatus('')
+        renderTodos()
         return
       }
-      const category = String(categoryEl?.value ?? 'work')
-      const priority = String(priorityEl?.value ?? 'medium')
+
+      const saveBtn = event.target.closest('.todo-edit-save')
+      if (saveBtn) {
+        const item = saveBtn.closest('.todo-stamp')
+        const textInput = item?.querySelector('.todo-edit-text')
+        const dueInput = item?.querySelector('.todo-edit-due')
+        const categoryEl = item?.querySelector('.todo-edit-category')
+        const priorityEl = item?.querySelector('.todo-edit-priority')
+        const id = saveBtn.dataset.id
+        const text = textInput ? String(textInput.value).trim() : ''
+        if (!text) {
+          setStatus('Enter a task before saving.', 'notice')
+          textInput?.focus()
+          return
+        }
+        const due = dueInput && String(dueInput.value).trim() ? String(dueInput.value) : ''
+        if (!due) {
+          setStatus('Due date is required.')
+          dueInput?.reportValidity()
+          return
+        }
+        const category = String(categoryEl?.value ?? 'work')
+        const priority = String(priorityEl?.value ?? 'medium')
+
+        if (!(await ensureSession())) return
+
+        setStatus('')
+        const { error } = await supabase
+          .from('todos')
+          .update({ text, category, due_date: due, priority })
+          .eq('id', Number(id))
+
+        if (error) {
+          console.error('Failed to update todo:', error.message)
+          setStatus(`Could not save changes: ${error.message}`)
+          return
+        }
+
+        todos = todos.map((t) =>
+          t.id === String(id)
+            ? { ...t, text, category: normalizeCategory(category), dueDate: due, priority }
+            : t,
+        )
+        editingTodoId = null
+        renderTodos()
+        return
+      }
+
+      const editButton = event.target.closest('.todo-edit-button')
+      if (editButton) {
+        editingTodoId = String(editButton.dataset.id)
+        setStatus('')
+        renderTodos()
+        return
+      }
+
+      const deleteButton = event.target.closest('.todo-delete-button')
+      if (!deleteButton) return
 
       if (!(await ensureSession())) return
 
-      setStatus('')
-      const { error } = await supabase
-        .from('todos')
-        .update({ text, category, due_date: due, priority })
-        .eq('id', Number(id))
+      const id = Number(deleteButton.dataset.id)
+
+      const { error } = await supabase.from('todos').delete().eq('id', id)
 
       if (error) {
-        console.error('Failed to update todo:', error.message)
-        setStatus(`Could not save changes: ${error.message}`)
+        console.error('Failed to delete todo:', error.message)
+        setStatus(`Could not delete task: ${error.message}`)
         return
       }
 
-      todos = todos.map((t) =>
-        t.id === String(id)
-          ? { ...t, text, category: normalizeCategory(category), dueDate: due, priority }
-          : t,
-      )
-      editingTodoId = null
-      renderTodos()
-      return
-    }
-
-    const editButton = event.target.closest('.todo-edit-button')
-    if (editButton) {
-      editingTodoId = String(editButton.dataset.id)
       setStatus('')
+      if (editingTodoId === String(id)) editingTodoId = null
+      todos = todos.filter((todo) => todo.id !== String(id))
       renderTodos()
-      return
-    }
-
-    const deleteButton = event.target.closest('.todo-delete-button')
-    if (!deleteButton) return
-
-    if (!(await ensureSession())) return
-
-    const id = Number(deleteButton.dataset.id)
-
-    const { error } = await supabase.from('todos').delete().eq('id', id)
-
-    if (error) {
-      console.error('Failed to delete todo:', error.message)
-      setStatus(`Could not delete task: ${error.message}`)
-      return
-    }
-
-    setStatus('')
-    if (editingTodoId === String(id)) editingTodoId = null
-    todos = todos.filter((todo) => todo.id !== String(id))
-    renderTodos()
-  })
-}
-
-if (retryButton) {
-  retryButton.addEventListener('click', () => {
-    if (currentUserId) loadTodos(currentUserId)
-  })
-}
-
-authTabs.forEach((tab) => {
-  tab.addEventListener('click', () => setActiveAuthPanel(tab.dataset.panel))
-})
-
-if (authSignupForm) {
-  authSignupForm.addEventListener('submit', async (event) => {
-    event.preventDefault()
-    const email = authSignupEmail?.value.trim() ?? ''
-    const password = authSignupPassword?.value ?? ''
-    if (!email || !password) return
-
-    setStatus('')
-    const { data, error } = await supabase.auth.signUp({ email, password })
-
-    if (error) {
-      setStatus(error.message)
-      return
-    }
-
-    if (data.session?.user) {
-      if (authSignupPassword) authSignupPassword.value = ''
-      await loadTodos(data.session.user.id)
-      updateAuthUi(data.session.user)
-      return
-    }
-
-    if (data.user) {
-      setStatus('Check your email to confirm your account, then sign in.', 'notice')
-      if (authSignupPassword) authSignupPassword.value = ''
-    }
-  })
-}
-
-if (authSigninForm) {
-  authSigninForm.addEventListener('submit', async (event) => {
-    event.preventDefault()
-    const email = authSigninEmail?.value.trim() ?? ''
-    const password = authSigninPassword?.value ?? ''
-    if (!email || !password) return
-
-    setStatus('')
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-
-    if (error) {
-      setStatus(error.message)
-      return
-    }
-
-    if (data.user) {
-      if (authSigninPassword) authSigninPassword.value = ''
-      await loadTodos(data.user.id)
-      updateAuthUi(data.user)
-    }
-  })
-}
-
-if (authSignOutBtn) {
-  authSignOutBtn.addEventListener('click', async () => {
-    setStatus('')
-    await supabase.auth.signOut()
-    const user = await ensureSession()
-    if (user) {
-      await loadTodos(user.id)
-    } else {
-      todos = []
-      renderTodos()
-    }
-    updateAuthUi(user)
-  })
-}
-
-;(async () => {
-  try {
-    const user = await ensureSession()
-    if (!user) {
-      setStatus(`Could not sign in anonymously.${deploySetupHint()}`)
-      updateAuthUi(null)
-      return
-    }
-    updateAuthUi(user)
-    await loadTodos(user.id)
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    console.error('Startup failed:', err)
-    setLoading(false)
-    setStatus(`Something went wrong on startup: ${msg}.${deploySetupHint()}`)
-    updateAuthUi(null)
-    refreshUiLock()
+    })
   }
-})()
+
+  if (retryButton) {
+    retryButton.addEventListener('click', () => {
+      if (currentUserId) loadTodos(currentUserId)
+    })
+  }
+
+  authTabs.forEach((tab) => {
+    tab.addEventListener('click', () => setActiveAuthPanel(tab.dataset.panel))
+  })
+
+  authOpenBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const panel = btn.dataset.openAuth
+      if (panel === 'signin' || panel === 'signup') openAuthDialog(panel)
+    })
+  })
+
+  authDialogClose?.addEventListener('click', () => authDialog?.close())
+
+  if (authSignupForm) {
+    authSignupForm.addEventListener('submit', async (event) => {
+      event.preventDefault()
+      const email = authSignupEmail?.value.trim() ?? ''
+      const password = authSignupPassword?.value ?? ''
+      if (!email || !password) return
+
+      setStatus('')
+      const { data, error } = await supabase.auth.signUp({ email, password })
+
+      if (error) {
+        setStatus(error.message)
+        return
+      }
+
+      if (data.session?.user) {
+        if (authSignupPassword) authSignupPassword.value = ''
+        await loadTodos(data.session.user.id)
+        updateAuthUi(data.session.user)
+        authDialog?.close()
+        return
+      }
+
+      if (data.user) {
+        setStatus('Check your email to confirm your account, then sign in.', 'notice')
+        if (authSignupPassword) authSignupPassword.value = ''
+        authDialog?.close()
+      }
+    })
+  }
+
+  if (authSigninForm) {
+    authSigninForm.addEventListener('submit', async (event) => {
+      event.preventDefault()
+      const email = authSigninEmail?.value.trim() ?? ''
+      const password = authSigninPassword?.value ?? ''
+      if (!email || !password) return
+
+      setStatus('')
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+
+      if (error) {
+        setStatus(error.message)
+        return
+      }
+
+      if (data.user) {
+        if (authSigninPassword) authSigninPassword.value = ''
+        await loadTodos(data.user.id)
+        updateAuthUi(data.user)
+        authDialog?.close()
+      }
+    })
+  }
+
+  if (authSignOutBtn) {
+    authSignOutBtn.addEventListener('click', async () => {
+      setStatus('')
+      await supabase.auth.signOut()
+      const user = await ensureSession()
+      if (user) {
+        await loadTodos(user.id)
+      } else {
+        todos = []
+        renderTodos()
+      }
+      updateAuthUi(user)
+    })
+  }
+
+  ;(async () => {
+    try {
+      const user = await ensureSession()
+      if (!user) {
+        setStatus(`Could not sign in anonymously.${deploySetupHint()}`)
+        updateAuthUi(null)
+        return
+      }
+      updateAuthUi(user)
+      await loadTodos(user.id)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('Startup failed:', err)
+      setLoading(false)
+      renderTodos()
+      setStatus(`Something went wrong on startup: ${msg}.${deploySetupHint()}`)
+      updateAuthUi(null)
+      refreshUiLock()
+    }
+  })()
 } else {
   setStatus(
     'This deployment is missing Supabase settings. In Netlify open Site configuration → Environment variables and set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (from Supabase → Project Settings → API), then redeploy.',

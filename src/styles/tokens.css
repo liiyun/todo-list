@@ -1,30 +1,51 @@
 :root {
-  /* Colors - minimal neutral base with one calm accent */
-  --color-bg: #fafafa;
-  --color-surface: #ffffff;
-  --color-border: #e8e8ec;
-  --color-border-strong: #d1d1d8;
-  --color-text: #1a1a1f;
-  --color-text-muted: #6b6b76;
-  --color-text-subtle: #94949e;
-  --color-accent: #3d5a80;
-  --color-accent-hover: #2c4260;
-  --color-accent-muted: rgba(61, 90, 128, 0.1);
-  --color-danger: #c45c5c;
-  --color-danger-muted: rgba(196, 92, 92, 0.12);
-  --color-focus-ring: var(--color-accent);
+  color-scheme: dark;
 
-  /* Spacing scale */
+  --bg: #121214;
+  --panel: #1a1a1d;
+  --panel-2: #1e1e20;
+  --paper: #e8dcc3;
+  --paper-aged: #d8c8a7;
+  --ink-dark: #1f1a14;
+  --ink-muted: #6f6656;
+
+  --work: #5fa9b0;
+  --personal: #8fa27a;
+  --groceries: #c79a3b;
+
+  --priority-high: #b84a42;
+  --priority-medium: #c89b3c;
+  --priority-low: #5a7d91;
+
+  --done-red: rgba(239, 68, 68, 0.7);
+
+  --brass: #a47a3c;
+  --border-muted: rgba(232, 220, 195, 0.22);
+  --shadow-deep: rgba(0, 0, 0, 0.45);
+
+  --color-bg: var(--bg);
+  --color-surface: var(--panel);
+  --color-border: var(--border-muted);
+  --color-border-strong: rgba(232, 220, 195, 0.35);
+  --color-text: #e8e0d4;
+  --color-text-muted: #9a9285;
+  --color-text-subtle: #6f6656;
+  --color-accent: var(--brass);
+  --color-accent-hover: #c4a060;
+  --color-accent-muted: rgba(164, 122, 60, 0.2);
+  --color-danger: #e07070;
+  --color-danger-muted: rgba(184, 74, 66, 0.25);
+  --color-focus-ring: var(--brass);
+
   --space-xs: 0.25rem;
   --space-sm: 0.5rem;
   --space-md: 1rem;
   --space-lg: 1.5rem;
   --space-xl: 2rem;
 
-  /* Typography */
-  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-  --font-heading: var(--font-body);
-  --font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+  --font-body: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-heading: 'Special Elite', 'Courier New', monospace;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
@@ -35,37 +56,17 @@
   --leading-relaxed: 1.625;
   --tracking-tight: -0.02em;
   --tracking-normal: 0;
+  --tracking-wide: 0.12em;
 
-  /* Border radius */
   --radius-xs: 0.25rem;
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
 
-  /* Elevation */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md:
-    rgba(0, 0, 0, 0.06) 0 4px 6px -1px, rgba(0, 0, 0, 0.04) 0 2px 4px -2px;
-}
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: rgba(0, 0, 0, 0.5) 0 8px 20px -4px, rgba(0, 0, 0, 0.35) 0 4px 8px -2px;
+  --shadow-stamp: 0 6px 16px var(--shadow-deep), 0 2px 4px rgba(0, 0, 0, 0.4);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #141418;
-    --color-surface: #1c1c22;
-    --color-border: #2e2e36;
-    --color-border-strong: #3d3d47;
-    --color-text: #f4f4f5;
-    --color-text-muted: #a1a1aa;
-    --color-text-subtle: #71717a;
-    --color-accent: #7c9cbb;
-    --color-accent-hover: #9bb4cc;
-    --color-accent-muted: rgba(124, 156, 187, 0.15);
-    --color-danger: #e07a7a;
-    --color-danger-muted: rgba(224, 122, 122, 0.15);
-    --color-focus-ring: var(--color-accent);
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
-    --shadow-md:
-      rgba(0, 0, 0, 0.45) 0 8px 12px -2px, rgba(0, 0, 0, 0.3) 0 4px 6px -2px;
-  }
+  --noise-svg: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E");
 }

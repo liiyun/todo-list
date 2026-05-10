@@ -1,0 +1,1148 @@
+/* Philatelist app shell, stamp press, filters, grid, cards */
+
+.todo-app {
+  width: 100%;
+  max-width: 80rem;
+  padding: var(--space-xl);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-xl);
+  background:
+    var(--noise-svg),
+    linear-gradient(165deg, var(--panel) 0%, var(--panel-2) 45%, #141416 100%);
+  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.todo-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
+
+.todo-header-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+}
+
+.todo-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
+.todo-brand-mark {
+  flex-shrink: 0;
+  width: 3.75rem;
+  height: 3.75rem;
+  color: var(--color-text-muted);
+}
+
+.todo-brand-mark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.todo-brand-text {
+  min-width: 0;
+}
+
+.todo-title {
+  margin: 0;
+  color: #f0ebe0;
+  font-family: var(--font-heading);
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  line-height: var(--leading-tight);
+  letter-spacing: 0.04em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.todo-subtitle {
+  margin: var(--space-xs) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.todo-auth.todo-auth--header {
+  flex: 0 0 auto;
+  margin-left: auto;
+  max-width: none;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  gap: 0;
+}
+
+@media (max-width: 640px) {
+  .todo-header-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .todo-auth.todo-auth--header {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+/* Stamp press panel */
+.todo-stamp-press {
+  position: relative;
+  margin-bottom: var(--space-lg);
+  padding: var(--space-lg);
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.04) 0%, transparent 42%),
+    linear-gradient(180deg, #252528 0%, #1a1a1c 50%, #151517 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -2px 6px rgba(0, 0, 0, 0.35),
+    0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.todo-stamp-press::before,
+.todo-stamp-press::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #4a4a50, #1a1a1c);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15);
+  pointer-events: none;
+}
+
+.todo-stamp-press::before {
+  top: 10px;
+  left: 10px;
+}
+
+.todo-stamp-press::after {
+  top: 10px;
+  right: 10px;
+}
+
+.todo-stamp-press-inner {
+  position: relative;
+  display: grid;
+  gap: var(--space-md);
+}
+
+.todo-stamp-press-chip {
+  display: inline-block;
+  align-self: start;
+  padding: var(--space-xs) var(--space-sm);
+  max-width: 100%;
+  border: 1px solid rgba(184, 74, 66, 0.45);
+  border-radius: 2px;
+  background:
+    linear-gradient(180deg, #f2e8d4 0%, #e8dcc3 100%),
+    var(--noise-svg);
+  color: #8b2e2e;
+  font-family: var(--font-heading);
+  font-size: var(--text-sm);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transform: rotate(-0.8deg);
+}
+
+.todo-form {
+  display: contents;
+}
+
+.todo-form-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--space-md);
+}
+
+.todo-form-input-wrap {
+  flex: 1 1 12rem;
+  min-width: 0;
+  position: relative;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid rgba(31, 26, 20, 0.2);
+  border-radius: 2px;
+  background:
+    linear-gradient(180deg, #f4ead6 0%, var(--paper) 55%, #ded2b8 100%),
+    var(--noise-svg);
+  box-shadow:
+    inset 0 2px 6px rgba(255, 255, 255, 0.35),
+    inset 0 -2px 8px rgba(0, 0, 0, 0.06),
+    0 2px 6px rgba(0, 0, 0, 0.25);
+  clip-path: polygon(
+    0% 4%,
+    3% 0%,
+    12% 2%,
+    22% 0%,
+    35% 3%,
+    48% 0%,
+    62% 2%,
+    78% 0%,
+    92% 3%,
+    100% 1%,
+    100% 96%,
+    97% 100%,
+    85% 98%,
+    70% 100%,
+    55% 97%,
+    40% 100%,
+    25% 98%,
+    10% 100%,
+    0% 97%
+  );
+}
+
+.todo-form-input-wrap .todo-input {
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  padding: var(--space-sm) 0;
+  background: transparent;
+  color: var(--ink-dark);
+  font-size: var(--text-base);
+  box-shadow: none;
+}
+
+.todo-form-input-wrap .todo-input::placeholder {
+  color: var(--ink-muted);
+}
+
+.todo-form-input-wrap .todo-label--sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.todo-add-button-wrap {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 2px;
+}
+
+.todo-add-button {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 7.5rem;
+  padding: 0 0 0.5rem;
+  border: none;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  color: #f5ebe0;
+  text-transform: uppercase;
+  transition: transform 0.18s ease, filter 0.18s ease;
+  filter: drop-shadow(0 10px 6px rgba(0, 0, 0, 0.45));
+}
+
+.todo-add-button::before {
+  content: '';
+  display: block;
+  width: 4.25rem;
+  height: 2.75rem;
+  margin-bottom: var(--space-sm);
+  border-radius: 4px 4px 6px 6px;
+  background: linear-gradient(180deg, #3a3028 0%, #2a221c 40%, #1f1814 100%);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -4px 8px rgba(0, 0, 0, 0.4),
+    0 1px 0 rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+}
+
+.todo-add-button::after {
+  content: '';
+  position: absolute;
+  top: 0.35rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2rem;
+  height: 3.25rem;
+  border-radius: 6px 6px 4px 4px;
+  background: linear-gradient(90deg, #6b4f32 0%, #8b6238 35%, #7a5630 70%, #5c4028 100%);
+  box-shadow:
+    inset 0 2px 3px rgba(255, 220, 180, 0.25),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.35),
+    0 4px 0 #3d2818;
+}
+
+.todo-add-button:hover:not(:disabled) {
+  transform: translateY(-3px);
+  filter: drop-shadow(0 14px 8px rgba(0, 0, 0, 0.5));
+}
+
+.todo-add-button:active:not(:disabled) {
+  transform: translateY(2px);
+  filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.5));
+}
+
+.todo-add-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.todo-add-button--bounce::before {
+  animation: stamp-base-bounce 0.5s ease;
+}
+
+.todo-add-button--bounce::after {
+  animation: stamp-handle-bounce 0.5s ease;
+}
+
+@keyframes stamp-base-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(4px);
+  }
+}
+
+@keyframes stamp-handle-bounce {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  40% {
+    transform: translateX(-50%) translateY(6px);
+  }
+}
+
+.todo-form-row--options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  align-items: flex-end;
+}
+
+.todo-form-row--options .todo-field {
+  flex: 1 1 8rem;
+}
+
+.todo-form select,
+.todo-form .todo-due-date {
+  width: 100%;
+  border: 1px solid rgba(164, 122, 60, 0.45);
+  border-radius: var(--radius-md);
+  padding: 0.625rem var(--space-md);
+  padding-right: calc(var(--space-md) + 1.125rem + var(--space-sm));
+  color: var(--color-text);
+  background-color: rgba(0, 0, 0, 0.4);
+  font: inherit;
+  font-family: var(--font-mono);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.35);
+}
+
+.todo-form select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 16 16'%3E%3Cpath stroke='%23c4a060' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-md) center;
+  background-size: 1rem;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.todo-form .todo-due-date::-webkit-calendar-picker-indicator {
+  filter: invert(0.75) sepia(0.3);
+  cursor: pointer;
+}
+
+/* Filter + sort */
+.todo-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+  padding: var(--space-sm) 0;
+  border-top: 1px solid var(--border-muted);
+  border-bottom: 1px solid var(--border-muted);
+}
+
+.todo-filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.todo-filter-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-right: var(--space-sm);
+}
+
+.todo-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--border-muted);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.todo-filter-btn:hover {
+  border-color: var(--brass);
+  color: var(--color-text);
+}
+
+.todo-filter-btn--active {
+  border-color: var(--brass);
+  background: var(--color-accent-muted);
+  color: var(--color-accent-hover);
+}
+
+.todo-filter-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.todo-filter-dot--all {
+  background: linear-gradient(135deg, var(--work), var(--personal), var(--groceries));
+}
+
+.todo-filter-dot--work {
+  background: var(--work);
+}
+
+.todo-filter-dot--personal {
+  background: var(--personal);
+}
+
+.todo-filter-dot--groceries {
+  background: var(--groceries);
+}
+
+.todo-sort {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.todo-sort label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.todo-sort-select {
+  padding: var(--space-xs) var(--space-md);
+  padding-right: 2rem;
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 16 16'%3E%3Cpath stroke='%23c4a060' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+/* Grid */
+.todo-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-xl) var(--space-lg);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .todo-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .todo-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+.todo-list--skeleton {
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+/* Stamp card */
+.todo-stamp {
+  position: relative;
+  list-style: none;
+  --postmark-ink: var(--work);
+  width: min(100%, 14.5rem);
+  justify-self: center;
+  transform: rotate(var(--stamp-rot, 0deg));
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.todo-stamp--category-personal {
+  --postmark-ink: var(--personal);
+}
+
+.todo-stamp--category-groceries {
+  --postmark-ink: var(--groceries);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .todo-stamp:hover:not(.todo-stamp--editing) {
+    transform: translateY(-6px) rotate(var(--stamp-rot, 0deg));
+    z-index: 2;
+  }
+}
+
+.todo-stamp--editing {
+  grid-column: 1 / -1;
+  transform: none;
+  z-index: 3;
+}
+
+.todo-stamp-face {
+  display: block;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  border-radius: 0;
+}
+
+.todo-stamp-face:disabled {
+  cursor: default;
+}
+
+.todo-stamp-face:focus-visible {
+  outline: 3px solid var(--brass);
+  outline-offset: 4px;
+}
+
+.todo-stamp-serrated {
+  --stamp-edge: var(--priority-medium);
+  --perforation-gap: 18px;
+  --perforation-radius: 6px;
+  position: relative;
+  padding: 12px;
+  border-radius: 6px;
+  background-color: var(--stamp-edge);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.12));
+  box-shadow: var(--shadow-stamp);
+  -webkit-mask-image:
+    radial-gradient(circle at 50% 0, transparent 0 var(--perforation-radius), #000 calc(var(--perforation-radius) + 1px)),
+    radial-gradient(circle at 50% 100%, transparent 0 var(--perforation-radius), #000 calc(var(--perforation-radius) + 1px)),
+    radial-gradient(circle at 0 50%, transparent 0 var(--perforation-radius), #000 calc(var(--perforation-radius) + 1px)),
+    radial-gradient(circle at 100% 50%, transparent 0 var(--perforation-radius), #000 calc(var(--perforation-radius) + 1px));
+  mask-image:
+    radial-gradient(circle at 50% 0, transparent 0 var(--perforation-radius), #000 calc(var(--perforation-radius) + 1px)),
+    radial-gradient(circle at 50% 100%, transparent 0 var(--perforation-radius), #000 calc(var(--perforation-radius) + 1px)),
+    radial-gradient(circle at 0 50%, transparent 0 var(--perforation-radius), #000 calc(var(--perforation-radius) + 1px)),
+    radial-gradient(circle at 100% 50%, transparent 0 var(--perforation-radius), #000 calc(var(--perforation-radius) + 1px));
+  -webkit-mask-position: top 0 left 4px, bottom 0 left 4px, top 4px left 0, top 4px right 0;
+  mask-position: top 0 left 4px, bottom 0 left 4px, top 4px left 0, top 4px right 0;
+  -webkit-mask-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+  mask-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+  -webkit-mask-size:
+    var(--perforation-gap) 100%,
+    var(--perforation-gap) 100%,
+    100% var(--perforation-gap),
+    100% var(--perforation-gap);
+  mask-size:
+    var(--perforation-gap) 100%,
+    var(--perforation-gap) 100%,
+    100% var(--perforation-gap),
+    100% var(--perforation-gap);
+  -webkit-mask-composite: source-in, source-in, source-in;
+  mask-composite: intersect;
+}
+
+.todo-stamp-serrated--high {
+  --stamp-edge: var(--priority-high);
+}
+
+.todo-stamp-serrated--medium {
+  --stamp-edge: var(--priority-medium);
+}
+
+.todo-stamp-serrated--low {
+  --stamp-edge: var(--priority-low);
+}
+
+.todo-stamp-serrated--work {
+  --stamp-edge: var(--work);
+}
+
+.todo-stamp-paper {
+  position: relative;
+  z-index: 1;
+  min-height: 20.5rem;
+  padding: var(--space-md) var(--space-md) 3rem;
+  border-radius: 1px;
+  background:
+    radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.16), transparent 34%),
+    radial-gradient(circle at 70% 55%, rgba(78, 68, 50, 0.08), transparent 42%),
+    repeating-linear-gradient(112deg, rgba(31, 26, 20, 0.035) 0 1px, transparent 1px 9px),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.04)),
+    var(--paper);
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, var(--postmark-ink) 72%, transparent),
+    inset 0 0 0 5px rgba(232, 220, 195, 0.7),
+    inset 0 0 0 6px color-mix(in srgb, var(--postmark-ink) 45%, transparent),
+    inset 0 2px 12px rgba(255, 255, 255, 0.25);
+  overflow: hidden;
+}
+
+.todo-stamp-paper::before,
+.todo-stamp-paper::after {
+  content: '';
+  position: absolute;
+  inset: var(--space-sm);
+  pointer-events: none;
+}
+
+.todo-stamp-paper::before {
+  border: 1px solid var(--postmark-ink, var(--work));
+  opacity: 0.7;
+}
+
+.todo-stamp-paper::after {
+  opacity: 0.3;
+  background-image:
+    linear-gradient(90deg, var(--postmark-ink, var(--work)) 50%, transparent 0),
+    linear-gradient(90deg, var(--postmark-ink, var(--work)) 50%, transparent 0),
+    linear-gradient(0deg, var(--postmark-ink, var(--work)) 50%, transparent 0),
+    linear-gradient(0deg, var(--postmark-ink, var(--work)) 50%, transparent 0);
+  background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+  background-position: top left, bottom left, top left, top right;
+  background-size: 12px 1px, 12px 1px, 1px 12px, 1px 12px;
+}
+
+.todo-stamp--completed .todo-stamp-paper {
+  filter: grayscale(0.35) brightness(0.96);
+  opacity: 0.92;
+}
+
+.todo-stamp--overdue .todo-stamp-paper {
+  filter: brightness(0.94) saturate(0.85);
+  box-shadow:
+    inset 0 0 0 1px rgba(184, 74, 66, 0.35),
+    inset 0 2px 12px rgba(255, 255, 255, 0.15);
+}
+
+.todo-stamp--overdue .todo-stamp-serrated {
+  animation: overdue-glow 3.2s ease-in-out infinite;
+}
+
+@keyframes overdue-glow {
+  0%,
+  100% {
+    box-shadow: var(--shadow-stamp), 0 0 0 0 rgba(184, 74, 66, 0.35);
+  }
+  50% {
+    box-shadow: var(--shadow-stamp), 0 0 20px 2px rgba(184, 74, 66, 0.45);
+  }
+}
+
+.todo-stamp-postmark {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  width: 5.75rem;
+  height: 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  line-height: 1.1;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--postmark-ink, var(--work));
+  opacity: 0.85;
+  pointer-events: none;
+  transform: rotate(-13deg);
+  transform-origin: 1.6rem 1.7rem;
+}
+
+.todo-stamp-postmark--work {
+  --postmark-ink: var(--work);
+}
+
+.todo-stamp-postmark--personal {
+  --postmark-ink: var(--personal);
+}
+
+.todo-stamp-postmark--groceries {
+  --postmark-ink: var(--groceries);
+}
+
+.todo-stamp-postmark svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.todo-stamp-postmark span {
+  position: absolute;
+  left: 0.15rem;
+  top: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 3.3rem;
+  height: 100%;
+  font-weight: 700;
+}
+
+.todo-stamp-serial {
+  position: absolute;
+  top: 0.9rem;
+  right: 1rem;
+  font-family: var(--font-heading);
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: var(--postmark-ink, var(--work));
+  letter-spacing: 0.06em;
+  text-align: center;
+  white-space: pre-line;
+  opacity: 0.95;
+}
+
+.todo-stamp-watermark {
+  position: absolute;
+  left: 50%;
+  top: 48%;
+  transform: translate(-50%, -50%);
+  width: 8.25rem;
+  height: 14rem;
+  opacity: 0.24;
+  color: var(--postmark-ink, var(--work));
+  pointer-events: none;
+}
+
+.todo-stamp-watermark svg {
+  width: 100%;
+  height: 100%;
+}
+
+.todo-stamp-watermark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  mix-blend-mode: screen;
+}
+
+.todo-stamp--category-work .todo-stamp-watermark {
+  display: none;
+}
+
+.todo-stamp-title {
+  position: relative;
+  z-index: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 12.1rem 0.25rem 0;
+  text-align: center;
+  font-family: var(--font-heading);
+  font-size: clamp(1.35rem, 3vw, 1.7rem);
+  font-weight: 400;
+  line-height: 1.18;
+  color: var(--ink-dark);
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 0 rgba(255, 247, 226, 0.35);
+}
+
+.todo-stamp-denom {
+  position: absolute;
+  bottom: 0.95rem;
+  right: 1rem;
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: var(--postmark-ink, var(--work));
+}
+
+.todo-stamp-done {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.todo-stamp-done span {
+  padding: var(--space-sm) var(--space-lg);
+  border: 4px solid var(--done-red);
+  border-radius: 4px;
+  color: rgba(180, 40, 40, 0.85);
+  font-family: var(--font-heading);
+  font-size: clamp(1.25rem, 4vw, 1.75rem);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  transform: rotate(-12deg);
+  background: rgba(255, 240, 240, 0.35);
+  mix-blend-mode: multiply;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.08);
+}
+
+.todo-stamp--enter {
+  animation: stamp-enter 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes stamp-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(-28px) scale(0.92) rotate(var(--stamp-rot, 0deg));
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(var(--stamp-rot, 0deg));
+  }
+}
+
+/* Actions */
+.todo-stamp-actions {
+  position: absolute;
+  left: var(--space-sm);
+  bottom: var(--space-sm);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.todo-stamp-actions-inner {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  background: rgba(232, 220, 195, 0.92);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .todo-stamp:hover .todo-stamp-actions-inner,
+  .todo-stamp:focus-within .todo-stamp-actions-inner {
+    opacity: 1;
+  }
+}
+
+.todo-stamp--menu-open .todo-stamp-actions-inner {
+  opacity: 1;
+}
+
+@media (pointer: coarse) {
+  .todo-stamp-actions-inner {
+    opacity: 1;
+  }
+
+  .todo-stamp-menu {
+    display: inline-flex;
+  }
+
+  .todo-stamp-actions-inner .todo-edit-button,
+  .todo-stamp-actions-inner .todo-delete-button {
+    display: none;
+  }
+
+  .todo-stamp--menu-open .todo-stamp-actions-inner .todo-edit-button,
+  .todo-stamp--menu-open .todo-stamp-actions-inner .todo-delete-button {
+    display: inline-flex;
+  }
+}
+
+.todo-stamp-menu {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: rgba(31, 26, 20, 0.08);
+  color: var(--ink-dark);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.todo-stamp-menu:hover,
+.todo-stamp-menu:focus-visible {
+  background: rgba(31, 26, 20, 0.15);
+}
+
+.todo-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  flex-shrink: 0;
+  cursor: pointer;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-dark);
+}
+
+.todo-icon-button:hover,
+.todo-icon-button:focus-visible {
+  background: rgba(31, 26, 20, 0.1);
+}
+
+.todo-icon-button svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+.todo-edit-button svg,
+.todo-delete-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.todo-delete-button {
+  color: var(--priority-high);
+}
+
+/* Editing layout */
+.todo-stamp-edit {
+  padding: var(--space-lg);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+}
+
+.todo-item-edit {
+  display: grid;
+  gap: var(--space-md);
+  width: 100%;
+}
+
+.todo-item-edit-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  align-items: flex-end;
+}
+
+.todo-item-edit .todo-field {
+  flex: 1 1 8rem;
+}
+
+.todo-item-edit .todo-item-edit-task-field {
+  flex: 1 1 100%;
+}
+
+.todo-item-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.todo-edit-save {
+  padding: 0.5rem var(--space-md);
+  border: 1px solid var(--brass);
+  border-radius: var(--radius-md);
+  color: var(--ink-dark);
+  background: linear-gradient(180deg, #c4a060 0%, var(--brass) 100%);
+  font: inherit;
+  font-weight: 700;
+  font-size: var(--text-sm);
+  font-family: var(--font-mono);
+  cursor: pointer;
+}
+
+.todo-edit-save:hover {
+  filter: brightness(1.06);
+}
+
+.todo-edit-cancel {
+  padding: 0.5rem var(--space-md);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-md);
+  background: var(--panel-2);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  font-family: var(--font-mono);
+  cursor: pointer;
+}
+
+.todo-edit-cancel:hover {
+  border-color: var(--brass);
+}
+
+.todo-item .todo-edit-control {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-md);
+  padding: 0.5rem var(--space-md);
+  color: var(--color-text);
+  background-color: rgba(0, 0, 0, 0.35);
+  font: inherit;
+  font-family: var(--font-mono);
+  min-width: 0;
+}
+
+.todo-item select.todo-edit-control {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 16 16'%3E%3Cpath stroke='%23c4a060' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-md) center;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+/* Empty + skeleton */
+.todo-stamp-empty {
+  grid-column: 1 / -1;
+  margin: var(--space-xl) 0;
+  padding: var(--space-xl);
+  border: 2px dashed var(--border-muted);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.todo-stamp-empty p {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: var(--leading-relaxed);
+}
+
+.todo-stamp-skel {
+  min-height: 14rem;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--panel-2) 25%, var(--panel) 50%, var(--panel-2) 75%);
+  background-size: 200% 100%;
+  animation: skel-shine 1.2s ease-in-out infinite;
+}
+
+@keyframes skel-shine {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.todo-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.todo-footer-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-top: var(--space-xl);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--border-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+  line-height: var(--leading-relaxed);
+}
+
+.todo-footer-hint svg {
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+@media (max-width: 520px) {
+  .todo-app {
+    padding: var(--space-lg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .todo-stamp--enter {
+    animation: none;
+  }
+
+  .todo-stamp--overdue .todo-stamp-serrated {
+    animation: none;
+    box-shadow: var(--shadow-stamp), 0 0 12px rgba(184, 74, 66, 0.35);
+  }
+
+  .todo-stamp-skel {
+    animation: none;
+    background: var(--panel-2);
+  }
+
+  .todo-add-button--bounce::before,
+  .todo-add-button--bounce::after {
+    animation: none;
+  }
+}

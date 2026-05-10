@@ -1,5 +1,4 @@
 :root {
-  color-scheme: light dark;
   font-family: var(--font-body);
   font-size: var(--text-base);
   line-height: var(--leading-normal);
@@ -20,13 +19,17 @@ body {
   min-width: 320px;
   min-height: 100svh;
   margin: 0;
-  background:
-    radial-gradient(circle at top, var(--color-accent-muted), transparent 22rem),
-    var(--color-bg);
+  background-color: var(--bg);
+  background-image:
+    var(--noise-svg),
+    radial-gradient(ellipse 120% 80% at 50% -20%, rgba(164, 122, 60, 0.08), transparent 50%),
+    linear-gradient(180deg, #161618 0%, var(--bg) 40%, #0e0e10 100%);
+  background-repeat: repeat, no-repeat, no-repeat;
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -35,7 +38,8 @@ button {
 }
 
 button:focus-visible,
-input:focus-visible {
+input:focus-visible,
+select:focus-visible {
   outline: 3px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
@@ -43,12 +47,23 @@ input:focus-visible {
 #app {
   min-height: 100svh;
   display: grid;
-  place-items: center;
+  place-items: start center;
   padding: var(--space-xl) var(--space-md);
+  width: 100%;
 }
 
 @media (max-width: 520px) {
   #app {
     padding-inline: var(--space-sm);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
