@@ -429,7 +429,7 @@ function createEmptyState() {
   const p = document.createElement('p')
   if (todos.length === 0) {
     p.textContent =
-      'No stamps in the album yet. Press a new task into the collection with the stamp press above.'
+      "No stamps in the album yet. Press a new task into the collection with the 'Create' button above."
   } else {
     p.textContent = 'No stamps match this filter. Try another category or choose “All stamps.”'
   }
