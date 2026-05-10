@@ -534,7 +534,7 @@
 .todo-list {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-xl) var(--space-lg);
+  gap: var(--space-xl) calc(var(--space-lg) / 2);
   margin: 0;
   padding: 0;
   list-style: none;
