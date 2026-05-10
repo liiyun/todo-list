@@ -395,7 +395,7 @@
   color: var(--color-text-muted);
 }
 
-.todo-category-badge--errands {
+.todo-category-badge--groceries {
   background: rgba(196, 92, 92, 0.15);
   color: var(--color-danger);
 }

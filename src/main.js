@@ -176,6 +176,7 @@ async function ensureSession() {
 
 function normalizeCategory(cat) {
   if (cat == null || cat === '' || cat === 'general') return 'work'
+  if (cat === 'errands') return 'groceries'
   return cat
 }
 
@@ -205,7 +206,7 @@ function getVisibleTodos() {
 const CATEGORY_LABELS = {
   work: 'Work',
   personal: 'Personal',
-  errands: 'Errands',
+  groceries: 'Groceries',
 }
 
 function categoryClass(cat) {
@@ -239,7 +240,7 @@ if (dueDateInput && !dueDateInput.value) {
 
 function populateCategoryEditSelect(select, current) {
   const cur = normalizeCategory(current)
-  const order = ['work', 'personal', 'errands']
+  const order = ['work', 'personal', 'groceries']
   for (const value of order) {
     const opt = document.createElement('option')
     opt.value = value
