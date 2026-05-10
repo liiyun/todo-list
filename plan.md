@@ -6,7 +6,7 @@ Rough feature ideas for the TODO app—use this to prioritize work and decide wh
 
 Let users organize todos by category (e.g. **work**, **personal**, **errands**).
 
-- Add a **`category`** (or equivalent) column in persistence.
+- Add a `**category`** (or equivalent) column in persistence.
 - Let users assign a category via tags or a picker.
 - Show categories as **color-coded** labels on list items.
 - Support **filtering** the list by category.
@@ -15,7 +15,7 @@ Let users organize todos by category (e.g. **work**, **personal**, **errands**).
 
 Add a due date per todo so users can see what is coming up.
 
-- Add a **`due_date`** column (or equivalent).
+- Add a `**due_date`** column (or equivalent).
 - Use a **date picker** on the create (and optionally edit) form.
 - **Display** the due date on each todo row.
 - Consider **sorting** by due date and **emphasizing overdue** items.
@@ -24,7 +24,7 @@ Add a due date per todo so users can see what is coming up.
 
 Let users mark completion urgency as **high**, **medium**, or **low**.
 
-- Add a **`priority`** column with values such as `high` | `medium` | `low`.
+- Add a `**priority`** column with values such as `high` | `medium` | `low`.
 - Add a **priority selector** on create/edit flows.
 - Give high-priority rows **visual weight** (e.g. colored border or icon).
 - Allow **sort** and/or **filter** by priority.
@@ -54,3 +54,4 @@ Nice-to-have UX improvements for later exploration.
 - **Inline edit**—click a todo to edit text in place.
 - **Undo delete** with a short-lived toast/action.
 - **Keyboard shortcuts** for common actions.
+
