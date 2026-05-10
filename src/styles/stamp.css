@@ -99,23 +99,26 @@
   }
 
   .todo-form-input-wrap {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     width: 100%;
+    height: var(--stamp-press-control-height);
+    min-height: var(--stamp-press-control-height);
+    max-height: var(--stamp-press-control-height);
+    box-sizing: border-box;
   }
 
   .todo-add-button-wrap {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     align-self: stretch;
     width: 100%;
   }
 
   .todo-add-button {
     width: 100%;
-  }
-
-  .todo-form-row--options .todo-field {
-    flex: 1 1 100%;
-    min-width: 0;
+    height: var(--stamp-press-control-height);
+    min-height: var(--stamp-press-control-height);
+    max-height: var(--stamp-press-control-height);
+    box-sizing: border-box;
   }
 
   .todo-filter-bar {
@@ -136,6 +139,7 @@
 
 /* Stamp press panel */
 .todo-stamp-press {
+  --stamp-press-control-height: 2.75rem;
   position: relative;
   margin-bottom: var(--space-lg);
   padding: var(--space-lg);
@@ -220,8 +224,9 @@
   position: relative;
   display: flex;
   align-items: center;
-  height: 2.75rem;
-  min-height: 2.75rem;
+  height: var(--stamp-press-control-height, 2.75rem);
+  min-height: var(--stamp-press-control-height, 2.75rem);
+  box-sizing: border-box;
   padding: 0 var(--space-md);
   border: 1px solid rgba(31, 26, 20, 0.2);
   border-radius: var(--radius-md);
@@ -275,8 +280,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 2.75rem;
-  min-height: 2.75rem;
+  height: var(--stamp-press-control-height, 2.75rem);
+  min-height: var(--stamp-press-control-height, 2.75rem);
+  box-sizing: border-box;
   padding: 0 var(--space-lg);
   border: 1px solid var(--brass);
   border-radius: var(--radius-md);
@@ -308,23 +314,46 @@
 }
 
 .todo-form-row--options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-md);
-  align-items: flex-end;
-  margin-top: var(--space-sm);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: var(--space-md) var(--space-lg);
+  align-items: end;
+  margin-top: var(--space-md);
 }
 
 .todo-form-row--options .todo-field {
-  flex: 1 1 0;
-  min-width: 0;
+  display: grid;
   grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: var(--space-xs);
+  min-width: 0;
 }
 
-/* Long localized dates need more horizontal room than category/priority. */
-.todo-form-row--options .todo-field:has(.todo-due-date-wrap) {
-  flex: 1.25 1 12rem;
-  min-width: min(100%, 12.5rem);
+.todo-form-row--options .todo-label {
+  display: block;
+  width: 100%;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+@media (max-width: 900px) {
+  .todo-form-row--options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .todo-form-row--options .todo-field:has(.todo-due-date-wrap) {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .todo-form-row--options {
+    grid-template-columns: 1fr;
+  }
+
+  .todo-form-row--options .todo-field:has(.todo-due-date-wrap) {
+    grid-column: auto;
+  }
 }
 
 .todo-form .todo-due-date-wrap {
