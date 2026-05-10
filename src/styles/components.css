@@ -27,7 +27,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-sm);
-  margin-bottom: var(--space-md);
+  margin-bottom: var(--space-sm);
   min-height: 1.5rem;
 }
 
@@ -128,7 +128,7 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--space-xs);
+  gap: calc(var(--space-md) - 4px);
 }
 
 .todo-auth-header-btn {

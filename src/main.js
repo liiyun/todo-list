@@ -353,12 +353,6 @@ const SVG_ICON_TRASH = `<svg xmlns="http://www.w3.org/2000/svg" width="20" heigh
 
 const SVG_POSTMARK_RING = `<svg viewBox="0 0 64 44" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="20" cy="22" r="18" stroke="currentColor" stroke-width="1.8" opacity="0.88"/><circle cx="20" cy="22" r="15" stroke="currentColor" stroke-width="0.8" stroke-dasharray="3 2" opacity="0.76"/><path d="M34 11c8 .5 16 1.8 24 4M35 18c7.5.2 15.2 1.2 22.8 3.4M34 25c7.7.1 15.2 1 22.5 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity="0.65"/></svg>`
 
-const SVG_WATERMARK = {
-  work: '',
-  personal: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M24 8c-6 0-11 5-11 11v4h-3v16h28V23h-3v-4c0-6-5-11-11-11z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M19 19v4h10v-4c0-3-2-5-5-5s-5 2-5 5z" stroke="currentColor" stroke-width="1"/></svg>`,
-  groceries: '',
-}
-
 function appendSvgIcon(button, svgMarkup) {
   const t = document.createElement('template')
   t.innerHTML = svgMarkup.trim()
@@ -582,10 +576,6 @@ function createTodoItem(todo, visibleIndex) {
   serial.className = 'todo-stamp-serial'
   serial.textContent = `No.\n${String(visibleIndex + 1).padStart(3, '0')}`
 
-  const wm = document.createElement('div')
-  wm.className = 'todo-stamp-watermark'
-  wm.innerHTML = SVG_WATERMARK[catKey] ?? SVG_WATERMARK.work
-
   const title = document.createElement('p')
   title.className = 'todo-stamp-title'
   title.textContent = todo.text
@@ -595,7 +585,7 @@ function createTodoItem(todo, visibleIndex) {
   if (todo.dueDate) denom.dateTime = todo.dueDate
   denom.textContent = todo.dueDate ? formatDenomDate(todo.dueDate) : '—'
 
-  paper.append(priSr, postmark, serial, wm, title, denom)
+  paper.append(priSr, postmark, serial, title, denom)
 
   if (todo.completed) {
     const done = document.createElement('div')
@@ -766,14 +756,6 @@ function readTodoOptionsFromForm(form) {
   return { category, due_date, priority }
 }
 
-function triggerAddButtonBounce() {
-  if (!todoAddButton) return
-  todoAddButton.classList.remove('todo-add-button--bounce')
-  void todoAddButton.offsetWidth
-  todoAddButton.classList.add('todo-add-button--bounce')
-  window.setTimeout(() => todoAddButton.classList.remove('todo-add-button--bounce'), 500)
-}
-
 async function addTodoFromForm(form) {
   if (!form || addTodoInFlight) return
 
@@ -850,7 +832,6 @@ async function addTodoFromForm(form) {
     }
     if (dueDateInput) dueDateInput.value = todayIsoDate()
     titleInput?.focus()
-    triggerAddButtonBounce()
     renderTodos()
   } finally {
     addTodoInFlight = false
