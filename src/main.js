@@ -1,5 +1,5 @@
 import './styles/index.css'
-import { supabase } from './supabase.js'
+import { isSupabaseConfigured, supabase } from './supabase.js'
 
 const todoForm = document.querySelector('.todo-form')
 
@@ -67,7 +67,7 @@ function setStatus(message, variant = 'error') {
 }
 
 function refreshUiLock() {
-  const busy = isLoadingList || loadFailed || addTodoInFlight
+  const busy = !isSupabaseConfigured || isLoadingList || loadFailed || addTodoInFlight
   if (todoForm) {
     todoForm.querySelectorAll('input, button, select').forEach((el) => {
       el.disabled = busy
@@ -128,22 +128,50 @@ function setActiveAuthPanel(panel) {
   if (authSigninForm) authSigninForm.classList.toggle('todo-auth-form--hidden', panel !== 'signin')
 }
 
-async function ensureSession() {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (session?.user) return session.user
-
-  const { data, error } = await supabase.auth.signInAnonymously()
-
+async function completeAuthCodeFromUrl() {
+  if (!supabase || typeof window === 'undefined') return
+  const params = new URLSearchParams(window.location.search)
+  const code = params.get('code')
+  if (!code) return
+  const { error } = await supabase.auth.exchangeCodeForSession(code)
   if (error) {
-    console.error('Failed to sign in anonymously:', error.message)
-    setStatus(`Could not sign in anonymously. ${error.message}.${deploySetupHint()}`)
+    console.error('Auth code exchange failed:', error.message)
+    setStatus(`Could not complete sign-in. ${error.message}.${deploySetupHint()}`)
+    return
+  }
+  const url = new URL(window.location.href)
+  url.searchParams.delete('code')
+  const next = `${url.pathname}${url.search}${url.hash}`
+  window.history.replaceState({}, '', next)
+}
+
+async function ensureSession() {
+  if (!supabase) return null
+
+  try {
+    await completeAuthCodeFromUrl()
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (session?.user) return session.user
+
+    const { data, error } = await supabase.auth.signInAnonymously()
+
+    if (error) {
+      console.error('Failed to sign in anonymously:', error.message)
+      setStatus(`Could not sign in anonymously. ${error.message}.${deploySetupHint()}`)
+      return null
+    }
+
+    return data.session?.user ?? data.user ?? null
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('ensureSession failed:', err)
+    setStatus(`Authentication error: ${msg}.${deploySetupHint()}`)
     return null
   }
-
-  return data.session?.user ?? data.user ?? null
 }
 
 function normalizeCategory(cat) {
@@ -181,29 +209,48 @@ async function loadTodos(userId) {
   setStatus('')
   setLoading(true)
 
-  let { data, error } = await supabase
-    .from('todos')
-    .select(TODO_SELECT_FULL)
-    .eq('user_id', userId)
-    .order('created_at', { ascending: true })
-
-  if (error && isMissingColumnError(error)) {
-    const fallback = await supabase
-      .from('todos')
-      .select(TODO_SELECT_BASE)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: true })
-    data = fallback.data
-    error = fallback.error
+  if (!supabase) {
+    setLoading(false)
+    todos = []
+    renderTodos()
+    setLoadError('Supabase is not configured for this deployment.')
+    return
   }
 
-  setLoading(false)
+  let data = null
+  let error = null
+
+  try {
+    const full = await supabase
+      .from('todos')
+      .select(TODO_SELECT_FULL)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true })
+    data = full.data
+    error = full.error
+
+    if (error && isMissingColumnError(error)) {
+      const fallback = await supabase
+        .from('todos')
+        .select(TODO_SELECT_BASE)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true })
+      data = fallback.data
+      error = fallback.error
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('loadTodos failed:', err)
+    error = { message: msg }
+  } finally {
+    setLoading(false)
+  }
 
   if (error) {
     console.error('Failed to load todos:', error.message)
     todos = []
     renderTodos()
-    setLoadError(error.message)
+    setLoadError(error.message ?? 'Request failed')
     return
   }
 
@@ -239,6 +286,15 @@ async function addTodoFromForm(form) {
   if (!form || addTodoInFlight) return
 
   addTodoInFlight = true
+
+  if (!supabase) {
+    addTodoInFlight = false
+    refreshUiLock()
+    setStatus(
+      `Missing Supabase environment variables.${deploySetupHint()}`,
+    )
+    return
+  }
 
   const text = readTaskTitleFromForm(form)
   if (!text) {
@@ -309,6 +365,7 @@ async function addTodoFromForm(form) {
   }
 }
 
+if (isSupabaseConfigured) {
 if (todoForm) {
   todoForm.addEventListener('input', (event) => {
     const t = event.target
@@ -783,12 +840,28 @@ if (authSignOutBtn) {
 }
 
 ;(async () => {
-  const user = await ensureSession()
-  if (!user) {
-    setStatus(`Could not sign in anonymously.${deploySetupHint()}`)
+  try {
+    const user = await ensureSession()
+    if (!user) {
+      setStatus(`Could not sign in anonymously.${deploySetupHint()}`)
+      updateAuthUi(null)
+      return
+    }
+    updateAuthUi(user)
+    await loadTodos(user.id)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('Startup failed:', err)
+    setLoading(false)
+    setStatus(`Something went wrong on startup: ${msg}.${deploySetupHint()}`)
     updateAuthUi(null)
-    return
+    refreshUiLock()
   }
-  updateAuthUi(user)
-  await loadTodos(user.id)
 })()
+} else {
+  setStatus(
+    'This deployment is missing Supabase settings. In Netlify open Site configuration → Environment variables and set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (from Supabase → Project Settings → API), then redeploy.',
+  )
+  updateAuthUi(null)
+  refreshUiLock()
+}
